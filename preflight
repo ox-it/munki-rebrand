@@ -1,0 +1,9 @@
+#!/bin/bash
+
+ORCHARD_DEFAULTS=/Library/Preferences/uk.ac.ox.it.orchard
+MUNKI_DEFAULTS=/Library/Preferences/ManagedInstalls
+LOG_FILE=$(defaults read "${MUNKI_DEFAULTS}" LogFile)
+LOG_DIR=$(dirname "${LOG_FILE}")
+INSTALL_LOG_MTIME=$(stat -f "%m" "${LOG_DIR}/Install.log")
+
+defaults write "${ORCHARD_DEFAULTS}" InstallLogMtime "${INSTALL_LOG_MTIME}"
