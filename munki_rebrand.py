@@ -14,7 +14,7 @@
 # Put this script in an *empty* directory
 # and make it executable
 #
-# Set appNameWanted and appName localized to your preferred name(s)
+# Set appNameWanted to your preferred name
 # Add an optional AppIcon.icons file
 # Add an optional postflight_script
 # Add an optional postinstall_script
@@ -31,11 +31,25 @@ from os import listdir, stat, chmod
 from os.path import isfile, join
 from shutil import copyfile
 
-# App name requiring replacement
-appNameOriginal = 'Managed Software Center'
-
 # Desired new app name
 appNameWanted = 'Orchard Software Centre'
+
+# Optional icon file to replace the MSC icon
+srcIcon = 'AppIcon.icns'
+
+# Optional postflight script to be executed after managesoftwareupdate runs
+#postflight_script = 'postflight_script'
+
+# Optional postinstall script to be executed upon install
+postinstall_script = 'postinstall_script'
+
+# Git release tag (leave empty for latest build)
+tag = 'v2.2.4'
+
+### Probably don't need to edit below this line
+
+# App name requiring replacement
+appNameOriginal = 'Managed Software Center'
 
 # Localized forms of app name
 appNameLocalized = {    'da'       : 'Managed Software Center',
@@ -53,18 +67,6 @@ appNameLocalized = {    'da'       : 'Managed Software Center',
                                 'ru'       : 'Центр Управления ПО',
                                 'sv'       : 'Managed Software Center'
                             }
-
-# Optional icon file to replace the MSC icon
-srcIcon = 'AppIcon.icns'
-
-# Optional postflight script to be executed after managesoftwareupdate runs
-#postflight_script = 'postflight_script'
-
-# Optional postinstall script to be executed upon install
-postinstall_script = 'postinstall_script'
-
-# Git release tag (leave empty for latest build)
-tag = 'v2.2.4'
 
 # Git repo
 git_repo = "https://github.com/munki/munki"
