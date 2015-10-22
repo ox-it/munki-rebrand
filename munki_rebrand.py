@@ -37,9 +37,6 @@ appNameWanted = 'Orchard Software Centre'
 # Optional icon file to replace the MSC icon
 srcIcon = 'AppIcon.icns'
 
-# Optional postflight script to be executed after managesoftwareupdate runs
-#postflight_script = 'postflight_script'
-
 # Optional postinstall script to be executed upon install
 postinstall_script = 'postinstall_script'
 
