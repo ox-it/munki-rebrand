@@ -16,7 +16,6 @@
 #
 # Set appNameWanted to your preferred name
 # Add an optional AppIcon.icons file
-# Add an optional postflight_script
 # Add an optional postinstall_script
 #
 # Then run ./munki_rebrand.py
