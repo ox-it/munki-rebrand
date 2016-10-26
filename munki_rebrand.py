@@ -40,7 +40,7 @@ srcIcon = 'AppIcon.icns'
 postinstall_script = 'postinstall_script'
 
 # Git release tag (leave empty for latest build)
-tag = 'v2.2.4'
+tag = 'v2.8.2'
 
 ### Probably don't need to edit below this line
 
