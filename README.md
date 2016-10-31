@@ -4,7 +4,7 @@ munki_rebrand is a script to rebrand the Managed Software Center app from Greg N
 
 ## Usage
 
-Please note: munki_rebrand must be run as root in order to successfully build the output pkg. You will need Xcode and its command-line tools installed.
+Please note: munki_rebrand must be run as root in order to successfully build the output pkg. You will need Xcode (7+) and its command-line tools installed.
 
 At its simplest you can use ```sudo ./munki_rebrand.py --appname "Amazing Software Center"``` to rename Managed Software Center to Amazing Software Center in the Finder where the language is set to English (U.S.) and you install Munki with the outputted pkg file. Use the ```--localized``` option to also changed all localized versions of Managed Software Center to your desired app name.
 
