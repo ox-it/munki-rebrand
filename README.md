@@ -17,7 +17,7 @@ For usage help please see ```sudo ./munki_rebrand.py --help```
 ## Notes
 * The app will still appear as ```Managed Software Center.app``` in the filesystem e.g. when viewed in Terminal. This is by design, in case the app is called or searched for by name by any other process. The changed name will only appear in Finder, the Dock, and the app's menu bar.
 * The pkg ids of ```com.google.munki.*``` are also left unchanged for similar reasons.
-* Older versions of munki may require that you have the OS X 10.8 SDK added to XCode. See <https://github.com/munki/munki/wiki/Building%20Munki2%20Pkgs>
+* Versions of munki older than 2.8.0 may require that you have the OS X 10.8 SDK added to XCode. See <https://github.com/munki/munki/wiki/Building-Munki2-Pkgs/b9976fabfb964a727da3e7e38ef3b5857554f284> if you're really intent on building an older version.
 
 ## To-do
 * Enable the splitting of the distribution pkg into its component pkgs so that the user can decide which to upgrade (perhaps they do not want to upgrade the launchd package if not necessary and can therefore avoid a reboot).
