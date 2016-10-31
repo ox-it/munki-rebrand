@@ -180,13 +180,13 @@ def main():
     if args.icon_file and not isfile(args.icon_file):
         precheck_errors.append(
             'Icon file %s does not exist' % args.icon_file)
-        if args.postinstall and not isfile(args.postinstall):
-            precheck_errors.append(
-                'postinstall script %s does not exist.' % args.postinstall)
-            if precheck_errors:
-                for error in precheck_errors:
-                    print error
-                    sys.exit(1)
+    if args.postinstall and not isfile(args.postinstall):
+        precheck_errors.append(
+            'postinstall script %s does not exist.' % args.postinstall)
+    if precheck_errors:
+        for error in precheck_errors:
+            print error
+            sys.exit(1)
 
     # Clone git repo
     print "Cloning git repo..."
