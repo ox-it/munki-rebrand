@@ -143,7 +143,9 @@ def main():
 
     p = argparse.ArgumentParser(description="Rebrands Munki's Managed Software "
                                 "Center - gives the app a new name in Finder, "
-                                "and can also modify its icon.")
+                                "and can also modify its icon. N.B. You will "
+                                "need Xcode and its command-line tools installed "
+                                "to run this script successfully.")
 
     p.add_argument('-a', '--appname', action='store',
                    required=True,
