@@ -4,7 +4,7 @@ munki_rebrand is a script to rebrand the Managed Software Center app from Greg N
 
 ## Usage
 
-Please note: munki_rebrand must be run as root in order to successfully build the output pkg.
+Please note: munki_rebrand must be run as root in order to successfully build the output pkg. You will need Xcode and its command-line tools installed.
 
 At its simplest you can use ```sudo ./munki_rebrand.py --appname "Amazing Software Center"``` to rename Managed Software Center to Amazing Software Center in the Finder where the language is set to English (U.S.) and you install Munki with the outputted pkg file. Use the ```--localized``` option to also changed all localized versions of Managed Software Center to your desired app name.
 
@@ -15,9 +15,9 @@ To download a specific tag of munki use the ```--munki-release``` option. If thi
 For usage help please see ```sudo ./munki_rebrand.py --help```
 
 ## Notes
-The app will still appear as ```Managed Software Center.app``` in the filesystem e.g. when viewed in Terminal. This is by design, in case the app is called or searched for by name by any other process. The changed name will only appear in Finder, the Dock, and the app's menu bar.
-
-The pkg ids of ```com.google.munki.*``` are also left unchanged for similar reasons.
+* The app will still appear as ```Managed Software Center.app``` in the filesystem e.g. when viewed in Terminal. This is by design, in case the app is called or searched for by name by any other process. The changed name will only appear in Finder, the Dock, and the app's menu bar.
+* The pkg ids of ```com.google.munki.*``` are also left unchanged for similar reasons.
+* Older versions of munki may require that you have the OS X 10.8 SDK added to XCode. See <https://github.com/munki/munki/wiki/Building%20Munki2%20Pkgs>
 
 ## To-do
 * Enable the splitting of the distribution pkg into its component pkgs so that the user can decide which to upgrade (perhaps they do not want to upgrade the launchd package if not necessary and can therefore avoid a reboot).
