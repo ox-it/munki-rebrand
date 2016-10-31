@@ -161,16 +161,16 @@ def main():
                    "envisage users using any other language than en_US.")
     p.add_argument('-o', '--outfile', action='store',
                    default=None,
-                   help="Optional base name for the customized pkg(s) "
-                   "outputtet by this tool.")
-    p.add_argument('-r', '--munki-release', action='store',
-                   default=None,
-                   help="Optional tag to download a specific release of munki "
-                   "e.g. 'v2.8.2'. Leave blank for latest Github code.")
+                   help="Optional base name for the customized pkg "
+                   "outputted by this tool.")
     p.add_argument('-p', '--postinstall', action='store',
                    default=None,
                    help="Optional postinstall script to include in the output "
                    "pkg.")
+    p.add_argument('-r', '--munki-release', action='store',
+                   default=None,
+                   help="Optional tag to download a specific release of munki "
+                   "e.g. 'v2.8.2'. Leave blank for latest Github code.")
     p.add_argument('-v', '--verbose', action='store_true',
                    help="Be more verbose.")
     args = p.parse_args()
