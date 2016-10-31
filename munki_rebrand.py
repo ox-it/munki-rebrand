@@ -263,7 +263,7 @@ def main():
 
     if args.outfile:
         # Rename the pkg to whatever is in args.outfile
-        "Renaming customized pkg..."
+        print "Renaming customized pkg..."
         out_pkg = re.sub('munkitools', args.outfile, munki_pkg)
         rename(join(tmp_dir, munki_pkg), join(tmp_dir, out_pkg))
         munki_pkg = out_pkg
