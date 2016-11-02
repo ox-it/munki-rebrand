@@ -161,7 +161,7 @@ def main():
                    help="Change localized versions of Managed Software Center "
                    "to your desired app name. You probably want this if you "
                    "envisage users using any other language than en_US.")
-    p.add_argument('-o', '--outfile', action='store',
+    p.add_argument('-o', '--output-file', action='store',
                    default=None,
                    help="Optional base name for the customized pkg "
                    "outputted by this tool.")
@@ -263,10 +263,10 @@ def main():
         verbose=args.verbose)
     munki_pkg = group.groupdict()['munki_pkg']
 
-    if args.outfile:
+    if args.output_file:
         # Rename the pkg to whatever is in args.outfile
         print "Renaming customized pkg..."
-        out_pkg = re.sub('munkitools', args.outfile, munki_pkg)
+        out_pkg = re.sub('munkitools', args.output_file, munki_pkg)
         rename(join(tmp_dir, munki_pkg), join(tmp_dir, out_pkg))
         munki_pkg = out_pkg
 
