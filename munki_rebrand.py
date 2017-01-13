@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
 from subprocess import Popen, PIPE
+from distutils.dir_util import copy_tree
 from os import listdir, stat, chmod, geteuid, mkdir, rename, getcwd
 from os.path import join, isfile, isdir
 from shutil import copyfile, copy, rmtree
@@ -129,8 +130,7 @@ def convert_to_icns(png, verbose=False):
                '--out', join(iconset, 'icon_%s.png' % suffix)]
         run_cmd(cmd, verbose=verbose)
     icns = join(tmp_dir, 'AppIcns.icns')
-    cmd = ['iconutil', '-c', 'icns', iconset,
-            '-o', icns]
+    cmd = ['iconutil', '-c', 'icns', iconset, '-o', icns]
     run_cmd(cmd, verbose=verbose)
     return icns
 
@@ -141,11 +141,11 @@ def main():
               "munki installer pkg!"
         sys.exit(1)
 
-    p = argparse.ArgumentParser(description="Rebrands Munki's Managed Software "
-                                "Center - gives the app a new name in Finder, "
-                                "and can also modify its icon. N.B. You will "
-                                "need Xcode and its command-line tools installed "
-                                "to run this script successfully.")
+    p = argparse.ArgumentParser(description="Rebrands Munki's Managed Software"
+                                " Center - gives the app a new name in Finder,"
+                                " and can also modify its icon. N.B. You will"
+                                " need Xcode and its command-line tools"
+                                " installed to run this script successfully.")
 
     p.add_argument('-a', '--appname', action='store',
                    required=True,
@@ -173,6 +173,10 @@ def main():
                    default=None,
                    help="Optional tag to download a specific release of munki "
                    "e.g. 'v2.8.2'. Leave blank for latest Github code.")
+    p.add_argument('-c', '--local-code', action='store',
+                   default=None,
+                   help="Use local copy of munki code. Specify path "
+                   "e.g. '/Users/Shared/munkicode'.")
     p.add_argument('-v', '--verbose', action='store_true',
                    help="Be more verbose.")
     args = p.parse_args()
@@ -190,19 +194,22 @@ def main():
             print error
             sys.exit(1)
 
-    # Clone git repo
-    print "Cloning git repo..."
-    cmd = ['git', 'clone', MUNKI_GITHUB, tmp_dir]
-    run_cmd(cmd, verbose=args.verbose)
-
-    # Checkout MUNKI_RELEASE if set
-    if args.munki_release:
-        print 'Checking out tag %s' % args.munki_release
-        cmd = ['git', '-C', tmp_dir, 'checkout',
-               'tags/%s' % args.munki_release]
-        run_cmd(cmd, verbose=args.verbose)
+    if args.local_code:
+        copy_tree(args.local_code, tmp_dir)
     else:
-        print "Using latest Github code..."
+        # Clone git repo
+        print "Cloning git repo..."
+        cmd = ['git', 'clone', MUNKI_GITHUB, tmp_dir]
+        run_cmd(cmd, verbose=args.verbose)
+
+        # Checkout MUNKI_RELEASE if set
+        if args.munki_release:
+            print 'Checking out tag %s' % args.munki_release
+            cmd = ['git', '-C', tmp_dir, 'checkout',
+                   'tags/%s' % args.munki_release]
+            run_cmd(cmd, verbose=args.verbose)
+        else:
+            print "Using latest Github code..."
 
     # Patch non-localized names
     print "Replacing %s with %s in apps..." % (APPNAME_ORIG,
@@ -235,14 +242,14 @@ def main():
         if args.icon_file.endswith('.png'):
             # Attempt to convert png to icns
             print "Converting .png file to .icns..."
-            args.icon_file = convert_to_icns(args.icon_file, verbose=args.verbose)
+            args.icon_file = convert_to_icns(args.icon_file,
+                                             verbose=args.verbose)
         print "Replacing icons with %s..." % args.icon_file
         for dest in [join(tmp_dir,
                             '%s/Managed Software Center.icns' % APP_DIRS['MSC_DIR']),
                         join(tmp_dir,
                             '%s/MunkiStatus.icns' % APP_DIRS['MS_DIR'])]:
             copyfile(args.icon_file, dest)
-
 
     if args.postinstall:
         # Copy postinstall to correct destination
