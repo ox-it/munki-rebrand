@@ -12,6 +12,10 @@ The ```--icon-file``` option allows you to specify the path to an icon to replac
 
 To download a specific tag of munki use the ```--munki-release``` option. If this is set to e.g. ```v2.8.2``` munki_rebrand will switch to this release for the building of your customized pkg. See the [Munki releases page](https://github.com/munki/munki/releases) for details of release tags. If this is not set, munki_rebrand will use the latest, bleeding-edge Munki code from Github. To specify the output filename of your custom pkg use ```--output-file```. For example, if you set this to ```"Amazing_Software_Center"``` your output file will be renamed from something like ```munkitools-2.8.2553.pkg``` to ```Amazing_Software_Center-2.8.2553.pkg```
 
+To use a local copy of munki use the ```--local-code``` option and specify a path. This will skip the git clone entirely.
+
+To use the new DEP package tool, use the ```--dep``` option.
+
 For usage help please see ```sudo ./munki_rebrand.py --help```
 
 ## Notes
@@ -22,4 +26,3 @@ For usage help please see ```sudo ./munki_rebrand.py --help```
 ## To-do
 * Enable the splitting of the distribution pkg into its component pkgs so that the user can decide which to upgrade (perhaps they do not want to upgrade the launchd package if not necessary and can therefore avoid a reboot).
 * munkiimport the resulting pkg(s)?
-
