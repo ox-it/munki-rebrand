@@ -130,8 +130,7 @@ def convert_to_icns(png, verbose=False):
                '--out', join(iconset, 'icon_%s.png' % suffix)]
         run_cmd(cmd, verbose=verbose)
     icns = join(tmp_dir, 'AppIcns.icns')
-    cmd = ['iconutil', '-c', 'icns', iconset,
-            '-o', icns]
+    cmd = ['iconutil', '-c', 'icns', iconset, '-o', icns]
     run_cmd(cmd, verbose=verbose)
     return icns
 
@@ -142,11 +141,11 @@ def main():
               "munki installer pkg!"
         sys.exit(1)
 
-    p = argparse.ArgumentParser(description="Rebrands Munki's Managed Software "
-                                "Center - gives the app a new name in Finder, "
-                                "and can also modify its icon. N.B. You will "
-                                "need Xcode and its command-line tools installed "
-                                "to run this script successfully.")
+    p = argparse.ArgumentParser(description="Rebrands Munki's Managed Software"
+                                " Center - gives the app a new name in Finder,"
+                                " and can also modify its icon. N.B. You will"
+                                " need Xcode and its command-line tools"
+                                " installed to run this script successfully.")
 
     p.add_argument('-a', '--appname', action='store',
                    required=True,
@@ -243,14 +242,14 @@ def main():
         if args.icon_file.endswith('.png'):
             # Attempt to convert png to icns
             print "Converting .png file to .icns..."
-            args.icon_file = convert_to_icns(args.icon_file, verbose=args.verbose)
+            args.icon_file = convert_to_icns(args.icon_file,
+                                             verbose=args.verbose)
         print "Replacing icons with %s..." % args.icon_file
         for dest in [join(tmp_dir,
                             '%s/Managed Software Center.icns' % APP_DIRS['MSC_DIR']),
                         join(tmp_dir,
                             '%s/MunkiStatus.icns' % APP_DIRS['MS_DIR'])]:
             copyfile(args.icon_file, dest)
-
 
     if args.postinstall:
         # Copy postinstall to correct destination
