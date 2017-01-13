@@ -14,6 +14,8 @@ To download a specific tag of munki use the ```--munki-release``` option. If thi
 
 To use a local copy of munki use the ```--local-code``` option and specify a path. This will skip the git clone entirely.
 
+To use the new DEP package tool, use the ```--dep``` option.
+
 For usage help please see ```sudo ./munki_rebrand.py --help```
 
 ## Notes
