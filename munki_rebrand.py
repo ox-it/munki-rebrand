@@ -38,8 +38,6 @@ import atexit
 
 MUNKI_GITHUB = 'https://github.com/munki/munki'
 
-MUNKI_MAKESCRIPT = 'code/tools/make_munki_mpkg.sh'
-
 APPNAME_ORIG = 'Managed Software Center'
 
 APPNAME_ORIG_LOCALIZED = {
@@ -258,6 +256,8 @@ def main():
         copyfile(args.postinstall, dest)
         st = stat(dest)
         chmod(dest, (st.st_mode | 0111))
+
+    MUNKI_MAKESCRIPT = 'code/tools/make_munki_mpkg.sh'
 
     # Run the munki build script on the customized files
     print "Building customized Munki..."
