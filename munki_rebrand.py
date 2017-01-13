@@ -195,6 +195,7 @@ def main():
             sys.exit(1)
 
     if args.local_code:
+        print 'Using local munki code'
         copy_tree(args.local_code, tmp_dir)
     else:
         # Clone git repo
