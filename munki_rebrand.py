@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
 from subprocess import Popen, PIPE
+from distutils.dir_util import copy_tree
 from os import listdir, stat, chmod, geteuid, mkdir, rename, getcwd
 from os.path import join, isfile, isdir
 from shutil import copyfile, copy, rmtree
@@ -173,6 +174,10 @@ def main():
                    default=None,
                    help="Optional tag to download a specific release of munki "
                    "e.g. 'v2.8.2'. Leave blank for latest Github code.")
+    p.add_argument('-c', '--local-code', action='store',
+                   default=None,
+                   help="Use local copy of munki code. Specify path "
+                   "e.g. '/Users/Shared/munkicode'.")
     p.add_argument('-v', '--verbose', action='store_true',
                    help="Be more verbose.")
     args = p.parse_args()
@@ -190,19 +195,22 @@ def main():
             print error
             sys.exit(1)
 
-    # Clone git repo
-    print "Cloning git repo..."
-    cmd = ['git', 'clone', MUNKI_GITHUB, tmp_dir]
-    run_cmd(cmd, verbose=args.verbose)
-
-    # Checkout MUNKI_RELEASE if set
-    if args.munki_release:
-        print 'Checking out tag %s' % args.munki_release
-        cmd = ['git', '-C', tmp_dir, 'checkout',
-               'tags/%s' % args.munki_release]
-        run_cmd(cmd, verbose=args.verbose)
+    if args.local_code:
+        copy_tree(args.local_code, tmp_dir)
     else:
-        print "Using latest Github code..."
+        # Clone git repo
+        print "Cloning git repo..."
+        cmd = ['git', 'clone', MUNKI_GITHUB, tmp_dir]
+        run_cmd(cmd, verbose=args.verbose)
+
+        # Checkout MUNKI_RELEASE if set
+        if args.munki_release:
+            print 'Checking out tag %s' % args.munki_release
+            cmd = ['git', '-C', tmp_dir, 'checkout',
+                   'tags/%s' % args.munki_release]
+            run_cmd(cmd, verbose=args.verbose)
+        else:
+            print "Using latest Github code..."
 
     # Patch non-localized names
     print "Replacing %s with %s in apps..." % (APPNAME_ORIG,
