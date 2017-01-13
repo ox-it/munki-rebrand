@@ -175,6 +175,8 @@ def main():
                    default=None,
                    help="Use local copy of munki code. Specify path "
                    "e.g. '/Users/Shared/munkicode'.")
+    p.add_argument('-d', '--dep', action='store_true',
+                   help="Use make_munki_mpkg_DEP.sh vs make_munki_mpkg.sh")
     p.add_argument('-v', '--verbose', action='store_true',
                    help="Be more verbose.")
     args = p.parse_args()
@@ -257,7 +259,11 @@ def main():
         st = stat(dest)
         chmod(dest, (st.st_mode | 0111))
 
-    MUNKI_MAKESCRIPT = 'code/tools/make_munki_mpkg.sh'
+    if args.dep:
+        print 'Using DEP Package tool...'
+        MUNKI_MAKESCRIPT = 'code/tools/make_munki_mpkg_DEP.sh'
+    else:
+        MUNKI_MAKESCRIPT = 'code/tools/make_munki_mpkg.sh'
 
     # Run the munki build script on the customized files
     print "Building customized Munki..."
