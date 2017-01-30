@@ -27,7 +27,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from subprocess import Popen, PIPE
 from os import listdir, stat, chmod, geteuid, mkdir, rename, getcwd
 from os.path import join, isfile, isdir
-from shutil import copyfile, copy, rmtree
+from distutils.dir_util import copy_tree
+from shutil import copyfile, rmtree
 from tempfile import mkdtemp
 import fileinput
 import argparse
@@ -38,6 +39,8 @@ import atexit
 MUNKI_GITHUB = 'https://github.com/munki/munki'
 
 MUNKI_MAKESCRIPT = 'code/tools/make_munki_mpkg.sh'
+
+MUNKI_MAKESCRIPT_DEP = 'code/tools/make_munki_mpkg_DEP.sh'
 
 APPNAME_ORIG = 'Managed Software Center'
 
@@ -97,7 +100,8 @@ def cleanup():
 
 
 def run_cmd(cmd, retgrep=None, verbose=False):
-    ''' Runs a command passed in as a list '''
+    ''' Runs a command passed in as a list. Can also be provided with a regex
+    to search for in the output, returning the result'''
     proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate()
     output = out
@@ -130,7 +134,7 @@ def convert_to_icns(png, verbose=False):
         run_cmd(cmd, verbose=verbose)
     icns = join(tmp_dir, 'AppIcns.icns')
     cmd = ['iconutil', '-c', 'icns', iconset,
-            '-o', icns]
+           '-o', icns]
     run_cmd(cmd, verbose=verbose)
     return icns
 
@@ -144,13 +148,22 @@ def main():
     p = argparse.ArgumentParser(description="Rebrands Munki's Managed Software "
                                 "Center - gives the app a new name in Finder, "
                                 "and can also modify its icon. N.B. You will "
-                                "need Xcode and its command-line tools installed "
-                                "to run this script successfully.")
+                                "need Xcode and its command-line tools "
+                                "installed to run this script successfully.")
 
     p.add_argument('-a', '--appname', action='store',
                    required=True,
-                   help="Your desired app name for Managed Software."
+                   help="Your desired app name for Managed Software "
                    "Center.")
+    p.add_argument('-c', '--local-code', action='store',
+                   default=None,
+                   help="Use a local copy of a munki code repo rather than "
+                   "cloning from GitHub. Provide the complete path e.g. "
+                   "/Users/Shared/my_munki_fork/")
+    p.add_argument('-d', '--dep', action='store_true',
+                   default=None,
+                   help="Build munki for DEP and other situations in which you "
+                   "do not wish to force a reboot after munki is installed")
     p.add_argument('-i', '--icon-file', action='store',
                    default=None,
                    help="Optional icon file to replace Managed Software "
@@ -160,21 +173,21 @@ def main():
     p.add_argument('-l', '--localized', action='store_true',
                    help="Change localized versions of Managed Software Center "
                    "to your desired app name. You probably want this if you "
-                   "envisage users using any other language than en_US.")
+                   "envisage users using any other language than en_US")
     p.add_argument('-o', '--output-file', action='store',
                    default=None,
                    help="Optional base name for the customized pkg "
-                   "outputted by this tool.")
+                   "outputted by this tool")
     p.add_argument('-p', '--postinstall', action='store',
                    default=None,
                    help="Optional postinstall script to include in the output "
-                   "pkg.")
+                   "pkg")
     p.add_argument('-r', '--munki-release', action='store',
                    default=None,
                    help="Optional tag to download a specific release of munki "
-                   "e.g. 'v2.8.2'. Leave blank for latest Github code.")
+                   "e.g. 'v2.8.2'. Leave blank for latest Github code")
     p.add_argument('-v', '--verbose', action='store_true',
-                   help="Be more verbose.")
+                   help="Be more verbose")
     args = p.parse_args()
 
     # Some pre-checks
@@ -185,24 +198,34 @@ def main():
     if args.postinstall and not isfile(args.postinstall):
         precheck_errors.append(
             'postinstall script %s does not exist.' % args.postinstall)
+    if args.local_code and not isdir(args.local_code):
+        precheck_errors.append(
+            'local code directory %s does not exist.' % args.local_code)
+    if args.local_code and args.munki_release:
+        precheck_errors.append(
+            'cannot set both --local-code and --munki-release')
     if precheck_errors:
         for error in precheck_errors:
             print error
             sys.exit(1)
 
-    # Clone git repo
-    print "Cloning git repo..."
-    cmd = ['git', 'clone', MUNKI_GITHUB, tmp_dir]
-    run_cmd(cmd, verbose=args.verbose)
-
-    # Checkout MUNKI_RELEASE if set
-    if args.munki_release:
-        print 'Checking out tag %s' % args.munki_release
-        cmd = ['git', '-C', tmp_dir, 'checkout',
-               'tags/%s' % args.munki_release]
+    if not args.local_code:
+        # Clone git repo
+        print "Cloning git repo..."
+        cmd = ['git', 'clone', MUNKI_GITHUB, tmp_dir]
         run_cmd(cmd, verbose=args.verbose)
+
+        # Checkout MUNKI_RELEASE if set
+        if args.munki_release:
+            print 'Checking out tag %s' % args.munki_release
+            cmd = ['git', '-C', tmp_dir, 'checkout',
+                   'tags/%s' % args.munki_release]
+            run_cmd(cmd, verbose=args.verbose)
+        else:
+            print "Using latest Github code..."
     else:
-        print "Using latest Github code..."
+        print "Copying local munki code to temp directory..."
+        copy_tree(args.local_code, tmp_dir)
 
     # Patch non-localized names
     print "Replacing %s with %s in apps..." % (APPNAME_ORIG,
@@ -214,7 +237,8 @@ def main():
     if args.localized:
         print "Replacing localized app names with %s..." % args.appname
         for app_dir in APP_DIRS.values():
-            ls = [name for name in listdir(join(tmp_dir, app_dir)) if isdir(join(tmp_dir, app_dir, name))]
+            ls = [name for name in listdir(join(tmp_dir, app_dir)) if isdir(
+                join(tmp_dir, app_dir, name))]
             for lproj_dir in ls:
                 for code, local_name in APPNAME_ORIG_LOCALIZED.iteritems():
                     if lproj_dir.endswith('%s.lproj' % code):
@@ -235,14 +259,16 @@ def main():
         if args.icon_file.endswith('.png'):
             # Attempt to convert png to icns
             print "Converting .png file to .icns..."
-            args.icon_file = convert_to_icns(args.icon_file, verbose=args.verbose)
+            args.icon_file = convert_to_icns(
+                args.icon_file, verbose=args.verbose)
         print "Replacing icons with %s..." % args.icon_file
         for dest in [join(tmp_dir,
-                            '%s/Managed Software Center.icns' % APP_DIRS['MSC_DIR']),
-                        join(tmp_dir,
-                            '%s/MunkiStatus.icns' % APP_DIRS['MS_DIR'])]:
+                          '%s/Managed Software Center.icns'
+                          % APP_DIRS['MSC_DIR']),
+                     join(tmp_dir,
+                          '%s/MunkiStatus.icns'
+                          % APP_DIRS['MS_DIR'])]:
             copyfile(args.icon_file, dest)
-
 
     if args.postinstall:
         # Copy postinstall to correct destination
@@ -254,12 +280,18 @@ def main():
 
     # Run the munki build script on the customized files
     print "Building customized Munki..."
-    cmd = [join(tmp_dir, MUNKI_MAKESCRIPT),
+    if args.dep:
+        print "Using DEP makescript..."
+        makescript = MUNKI_MAKESCRIPT_DEP
+    else:
+        makescript = MUNKI_MAKESCRIPT
+
+    cmd = [join(tmp_dir, makescript),
            '-r', tmp_dir,
            '-o', tmp_dir]
     group = run_cmd(
         cmd,
-        retgrep='Distribution package created at .*(?P<munki_pkg>munkitools.*pkg).',
+        retgrep='Distribution.*(?P<munki_pkg>munkitools.*pkg).',
         verbose=args.verbose)
     munki_pkg = group.groupdict()['munki_pkg']
 
