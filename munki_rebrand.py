@@ -186,6 +186,12 @@ def main():
                    default=None,
                    help="Optional tag to download a specific release of munki "
                    "e.g. 'v2.8.2'. Leave blank for latest Github code")
+    p.add_argument('-s', '--sign-package', action='store',
+                   default=None,
+                   help="Optional tag to sign distribution package with a "
+                   "Developer ID Installer certificate from keychain. Provide "
+                   "the certificate's Common Name. Ex: "
+                   "'Developer ID Installer: Munki (U8PN57A5N2)'")
     p.add_argument('-v', '--verbose', action='store_true',
                    help="Be more verbose")
     args = p.parse_args()
@@ -286,9 +292,16 @@ def main():
     else:
         makescript = MUNKI_MAKESCRIPT
 
-    cmd = [join(tmp_dir, makescript),
-           '-r', tmp_dir,
-           '-o', tmp_dir]
+    # Run the makescript with -s if optionally passed
+    if not args.sign_package:
+        cmd = [join(tmp_dir, makescript),
+               '-r', tmp_dir,
+               '-o', tmp_dir]
+    else:
+        cmd = [join(tmp_dir, makescript),
+               '-r', tmp_dir,
+               '-s', args.sign_package,
+               '-o', tmp_dir]
     group = run_cmd(
         cmd,
         retgrep='Distribution.*(?P<munki_pkg>munkitools.*pkg).',
