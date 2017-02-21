@@ -16,6 +16,8 @@ The ```--local-code``` option can be specified with a path to a directory contai
 
 The ```--dep``` option uses the new ```make_munki_mpkg_DEP.sh``` script which builds munki for use with DEP and other situations where you do not wish to force a reboot after install.
 
+The ```--sign-package``` option uses the new ```-s``` option from either ```make_munki_mpkg.sh``` or ```make_munki_mpkg_DEP.sh```. This allows you to have a rebranced munki package that is also natively signed. To use this option, your Developer Installer Certificate must be installed into the keychain. When using this option, you must specify the entire ```Common Name``` of the certificate. Example: ```"Developer ID Installer: Munki (U8PN57A5N2)"```
+
 For usage help please see ```sudo ./munki_rebrand.py --help```
 
 ## Notes
@@ -26,4 +28,3 @@ For usage help please see ```sudo ./munki_rebrand.py --help```
 ## To-do
 * Enable the splitting of the distribution pkg into its component pkgs so that the user can decide which to upgrade (perhaps they do not want to upgrade the launchd package if not necessary and can therefore avoid a reboot).
 * munkiimport the resulting pkg(s)?
-
