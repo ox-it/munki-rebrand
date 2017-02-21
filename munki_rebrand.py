@@ -188,7 +188,7 @@ def main():
                    "e.g. 'v2.8.2'. Leave blank for latest Github code")
     p.add_argument('-s', '--sign-package', action='store',
                    default=None,
-                   help="Optional tag to sign distribution package with a "
+                   help="Optional sign the munki distribution package with a "
                    "Developer ID Installer certificate from keychain. Provide "
                    "the certificate's Common Name. Ex: "
                    "'Developer ID Installer: Munki (U8PN57A5N2)'")
