@@ -64,12 +64,14 @@ APPNAME_ORIG_LOCALIZED = {
 
 APP_DIRS = {
     'MSC_DIR': 'code/apps/Managed Software Center/Managed Software Center',
+    'MN_DIR': 'code/apps/munki-notifier/munki-notifier',
     'MS_DIR': 'code/apps/MunkiStatus/MunkiStatus'
 }
 
 APP_FILES = [
     '%s/en.lproj/MainMenu.xib' % APP_DIRS['MSC_DIR'],
     '%s/MSCMainWindowController.py' % APP_DIRS['MSC_DIR'],
+    '%s/en.lproj/MainMenu.xib' % APP_DIRS['MN_DIR'],
     '%s/en.lproj/MainMenu.xib' % APP_DIRS['MS_DIR']
 ]
 
