@@ -70,6 +70,7 @@ APP_DIRS = {
 APP_FILES = [
     '%s/en.lproj/MainMenu.xib' % APP_DIRS['MSC_DIR'],
     '%s/MSCMainWindowController.py' % APP_DIRS['MSC_DIR'],
+    '%s/MSCPasswordAlertController.py' % APP_DIRS['MSC_DIR'],
     '%s/en.lproj/MainMenu.xib' % APP_DIRS['MS_DIR']
 ]
 
