@@ -2,6 +2,10 @@
 
 munki_rebrand is a script to rebrand the Managed Software Center app from Greg Neagle's [Munki](https://github.com/munki/munki). It allows you to give the app a different name in Finder (in all localized languages if required), modify its icon, and add an optional postinstall script to the installer pkg.
 
+## Important note about XCode 9.x
+
+26/09/2017 munki_rebrand is currently incompatible with XCode 9.x, as munki itself needs changes to build successfully with this version of XCode. The current recommended workaround is to use XCode 8.
+
 ## Usage
 
 Please note: munki_rebrand must be run as root in order to successfully build the output pkg. You will need Xcode (7+) and its command-line tools installed.
