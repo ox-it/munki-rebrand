@@ -6,7 +6,7 @@ It no longer requires Xcode to build a pkg. Instead it will either:
  - Download the latest release of munkitools from github, unpack it, rebrand it and repack it
  - Use or download a version of the munkitools pkg you specify with the -k or --pkg option. Therefore if you need a custom built pkg you can do this prior to running munki_rebrand, or you can download the automatic builds from https://munkibuilds.org
 
-It also no longer requires the ```-l, --localized argument``` - instead it assumes that you will always want to rebrand all localizations (I don't see why you wouldn't really.)
+It also no longer requires the ```-l, --localized``` argument - instead it assumes that you will always want to rebrand all localizations (I don't see why you wouldn't really.)
 
 
 munki_rebrand is a script to rebrand the Managed Software Center app from Greg Neagle's [Munki](https://github.com/munki/munki). It allows you to give the app a different name in Finder (in all localized languages if required), modify its icon, and add an optional postinstall script to the installer pkg.
@@ -15,7 +15,9 @@ munki_rebrand is a script to rebrand the Managed Software Center app from Greg N
 
 Please note: munki_rebrand must be run as root in order to successfully build the output pkg. You will need Xcode (7+) and its command-line tools installed.
 
-At its simplest you can use ```sudo ./munki_rebrand.py --appname "Amazing Software Center"``` to rename Managed Software Center to Amazing Software Center in the Finder in all localized versions of "Managed Software Center".
+At its simplest you can use ```sudo ./munki_rebrand.py --appname "Amazing Software Center"``` to download the latest munkitools pkg from Github, and rename Managed Software Center to Amazing Software Center in the Finder in all localized versions of "Managed Software Center".
+
+If you specify ```--pkg``` you can use either a pathname on disk to a prebuilt munkitools pkg or use an http/s URL to download one, which munki_rebrand will then attempt to rebrand.
 
 The ```--icon-file``` option allows you to specify the path to an icon to replace the one in Managed Software Center. This can be an .icns file or a 1024x1024 .png file with alpha channel for transparency that will be converted on the fly. An example .png is included in the repo. The ```--postinstall``` option allows you to specify the path to an optional postinstall script that will be executed after munki installs. A postinstall script could be used, for instance, to set the client defaults outlined on the [Munki wiki](https://github.com/munki/munki/wiki/Preferences).
 
