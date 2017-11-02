@@ -36,6 +36,7 @@ import atexit
 import glob
 import fnmatch
 import io
+import json
 
 APPNAME = 'Managed Software Center'
 
@@ -80,6 +81,8 @@ SIPS = '/usr/bin/sips'
 ICONUTIL = '/usr/bin/iconutil'
 CURL = '/usr/bin/curl'
 
+MUNKIURL = 'https://api.github.com/repos/munki/munki/releases/latest'
+
 global verbose
 verbose = False
 tmp_dir = mkdtemp()
@@ -95,7 +98,7 @@ def cleanup():
     print "Done."
 
 
-def run_cmd(cmd, retgrep=None):
+def run_cmd(cmd, ret=None):
     '''Runs a command passed in as a list. Can also be provided with a regex
     to search for in the output, returning the result'''
     proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
@@ -106,9 +109,23 @@ def run_cmd(cmd, retgrep=None):
     if proc.returncode is not 0:
         print err
         sys.exit(1)
-    if retgrep:
-        ret = re.search(retgrep, output)
-        return ret
+    if ret:
+        return output
+
+
+def get_latest_munki_url():
+    cmd = [CURL, MUNKIURL]
+    j = run_cmd(cmd, ret=True)
+    api_result = json.loads(j)
+    return api_result['assets'][0]['browser_download_url']
+
+def download_pkg(url, output):
+    print "Downloading munkitools from %s..." % url
+    cmd = [CURL,
+           '--location',
+           '--output', output,
+           url]
+    run_cmd(cmd)
 
 
 def flatten_pkg(directory, pkg):
@@ -257,7 +274,6 @@ def main():
                    help="Your desired app name for Managed Software "
                    "Center."),
     p.add_argument('-k', '--pkg', action='store',
-                   required=True,
                    help="Prebuilt munkitools pkg to rebrand."),
     p.add_argument('-i', '--icon-file', action='store',
                    default=None,
@@ -297,8 +313,13 @@ def main():
             print "Converting .png file to .icns..."
             args.icon_file = convert_to_icns(args.icon_file,
                                              tmp_dir)
+    output = os.path.join(tmp_dir, 'munkitools.pkg')
+    if not args.pkg:
+        download_pkg(get_latest_munki_url(), output)
+        args.pkg = output
     if args.pkg and args.pkg.startswith('http'):
-        args.pkg = download_pkg(args.pkg)
+        download_pkg(args.pkg, output)
+        args.pkg = output
     if args.pkg and os.path.isfile(args.pkg):
         root_dir = os.path.join(tmp_dir, 'root')
 
