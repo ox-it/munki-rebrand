@@ -1,5 +1,11 @@
 # munki_rebrand
 
+*** This is a beta version of version 2 of munki_rebrand. ***
+
+It no longer requires Xcode to build a pkg. Instead it will either:
+ - Download the latest release of munkitools from github, unpack it, rebrand it and repack it
+ - Use or download a version of the munkitools pkg you specify with the -k or --pkg option. Therefore if you need a custom built pkg you can do this prior to running munki_rebrand, or you can download the automatic builds from https://munkibuilds.org
+
 munki_rebrand is a script to rebrand the Managed Software Center app from Greg Neagle's [Munki](https://github.com/munki/munki). It allows you to give the app a different name in Finder (in all localized languages if required), modify its icon, and add an optional postinstall script to the installer pkg.
 
 ## Usage

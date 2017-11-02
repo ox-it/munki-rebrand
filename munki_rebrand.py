@@ -314,12 +314,16 @@ def main():
             args.icon_file = convert_to_icns(args.icon_file,
                                              tmp_dir)
     output = os.path.join(tmp_dir, 'munkitools.pkg')
+
+
     if not args.pkg:
         download_pkg(get_latest_munki_url(), output)
         args.pkg = output
+
     if args.pkg and args.pkg.startswith('http'):
         download_pkg(args.pkg, output)
         args.pkg = output
+
     if args.pkg and os.path.isfile(args.pkg):
         root_dir = os.path.join(tmp_dir, 'root')
 
