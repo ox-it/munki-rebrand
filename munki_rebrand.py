@@ -226,7 +226,7 @@ def replace_nib(nib_file, code, appname):
                                                          appname)
     backup_file = '%s.bak' % nib_file
     plist_to_xml(nib_file)
-    with io.open(backup_file, 'w') as fw,  io.open(nib_file, 'r') as fr:
+    with io.open(backup_file, 'w', encoding='utf-8') as fw,  io.open(nib_file, 'r', encoding='utf-8') as fr:
         for line in fr:
             # Simpler than mucking about with plistlib
             line = line.replace(localized, appname)
