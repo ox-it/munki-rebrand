@@ -243,11 +243,11 @@ def convert_to_icns(png, output_dir):
     for hw, suffix in ICON_SIZES:
         cmd = [SIPS, '-z', hw, hw, png,
                '--out', os.path.join(iconset, 'icon_%s.png' % suffix)]
-        run_cmd(cmd, verbose=verbose)
+        run_cmd(cmd)
     icns = os.path.join(output_dir, 'AppIcns.icns')
     cmd = [ICONUTIL, '-c', 'icns', iconset,
            '-o', icns]
-    run_cmd(cmd, verbose=verbose)
+    run_cmd(cmd)
     return icns
 
 
