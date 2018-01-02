@@ -210,7 +210,7 @@ def replace_strings(strings_file, code, appname):
             # and we don't want to do it to a comment
             if '=' in line and not line.startswith('/*'):
                 left, right = line.split('=')
-                right = right.replace(localized, appname)
+                right = right.replace(localized, appname.decode('utf-8'))
                 line = '='.join([left, right])
             fw.write(line)
     os.remove(strings_file)
@@ -229,7 +229,7 @@ def replace_nib(nib_file, code, appname):
     with io.open(backup_file, 'w', encoding='utf-8') as fw,  io.open(nib_file, 'r', encoding='utf-8') as fr:
         for line in fr:
             # Simpler than mucking about with plistlib
-            line = line.replace(localized, appname)
+            line = line.replace(localized, appname.decode('utf-8'))
             fw.write(line)
     os.remove(nib_file)
     os.rename(backup_file, nib_file)
