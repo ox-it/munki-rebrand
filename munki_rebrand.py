@@ -163,12 +163,13 @@ def make_unrelocatable(plist):
     plistlib.writePlist(p, plist)
 
 
-def pkgbuild(pkgroot, plist, identifier, script_dir, output_path):
+def pkgbuild(pkgroot, plist, identifier, version, script_dir, output_path):
     '''Uses a component plist to build a component pkg'''
     cmd = [PKGBUILD,
            '--root', pkgroot,
            '--component-plist', plist,
            '--identifier', identifier,
+           '--version', version,
            '--scripts', script_dir,
            output_path]
     run_cmd(cmd)
@@ -334,6 +335,7 @@ def main():
         # Grab just the first match of this glob to get the app pkg regardless
         # of version number
         app_pkg = glob.glob(os.path.join(root_dir, 'munkitools_app-*'))[0]
+        app_version = app_pkg.rsplit('-')[1]
 
         # Get our munkitools version from existing Distribution file
         # (will be same as munki core)
@@ -404,6 +406,7 @@ def main():
         pkgbuild(app_payload,
                  component_plist,
                  'com.googlecode.munki.app',
+                 app_version,
                  scripts_dir,
                  output_pkg)
         # Flatten the other pkgs into newroot
