@@ -335,7 +335,7 @@ def main():
         # Grab just the first match of this glob to get the app pkg regardless
         # of version number
         app_pkg = glob.glob(os.path.join(root_dir, 'munkitools_app-*'))[0]
-        app_version = app_pkg.rsplit('-')[1]
+        app_version = app_pkg.rsplit('-')[1].split('.pkg')[0]
 
         # Get our munkitools version from existing Distribution file
         # (will be same as munki core)
