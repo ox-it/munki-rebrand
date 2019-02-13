@@ -44,6 +44,9 @@ APPNAME_LOCALIZED = {
     'da': u'Managed Software Center',
     'de': u'Geführte Softwareaktualisierung',
     'en': u'Managed Software Center',
+    'en-AU': u'Managed Software Centre',
+    'en-GB': u'Managed Software Centre',
+    'en-CA': u'Managed Software Centre',
     'en_AU': u'Managed Software Centre',
     'en_GB': u'Managed Software Centre',
     'en_CA': u'Managed Software Centre',
@@ -59,9 +62,9 @@ APPNAME_LOCALIZED = {
 }
 
 MSC_APP = {'path': 'Applications/Managed Software Center.app/Contents/Resources',
-           'icon': 'Managed Software Center.icns'}
+           'icon': ['Managed Software Center.icns', 'AppIcon.icns']}
 MS_APP = {'path': os.path.join(MSC_APP['path'], 'MunkiStatus.app/Contents/Resources'),
-          'icon': 'MunkiStatus.icns'}
+          'icon': ['MunkiStatus.icns', 'AppIcon.icns']}
 
 APPS = [ MSC_APP, MS_APP ]
 
@@ -80,6 +83,8 @@ PLUTIL = '/usr/bin/plutil'
 SIPS = '/usr/bin/sips'
 ICONUTIL = '/usr/bin/iconutil'
 CURL = '/usr/bin/curl'
+ACTOOL = ['/usr/bin/actool',
+          '/Applications/Xcode.app/Contents/Developer/usr/bin/actool']
 
 MUNKIURL = 'https://api.github.com/repos/munki/munki/releases/latest'
 
@@ -87,7 +92,7 @@ global verbose
 verbose = False
 tmp_dir = mkdtemp()
 
-@atexit.register
+#@atexit.register
 def cleanup():
     print "Cleaning up..."
     try:
@@ -98,7 +103,7 @@ def cleanup():
     print "Done."
 
 
-def run_cmd(cmd, ret=None):
+def run_cmd(cmd, ret=None, verbose=True):
     '''Runs a command passed in as a list. Can also be provided with a regex
     to search for in the output, returning the result'''
     proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
@@ -195,8 +200,16 @@ def plist_to_binary(plist):
     cmd = [PLUTIL, '-convert', 'binary1', plist]
     run_cmd(cmd)
 
+def guess_encoding(string):
+    encodings = ['ascii', 'utf-8', 'utf-16']
+    for encoding in encodings:
+        try:
+            string.decode(encoding)
+            return encoding
+        except UnicodeError:
+            continue
 
-def replace_strings(strings_file, code, appname):
+def replace_strings(strings_file, code, appname, verbose=True):
     '''Replaces localized app name in a .strings file with desired app name'''
     localized = APPNAME_LOCALIZED[code]
     if verbose:
@@ -204,8 +217,12 @@ def replace_strings(strings_file, code, appname):
                                                          strings_file,
                                                          appname)
     backup_file = '%s.bak' % strings_file
-    with io.open(backup_file, 'w', encoding='utf-16') as fw, \
-         io.open(strings_file, 'r', encoding='utf-16') as fr:
+    with open(strings_file, 'rb') as f:
+        rawdata = f.read()
+        enc = guess_encoding(rawdata)
+
+    with io.open(backup_file, 'w', encoding=enc) as fw, \
+         io.open(strings_file, 'r', encoding=enc) as fr:
         for line in fr:
             # We want to only replace on the right hand side of any =
             # and we don't want to do it to a comment
@@ -237,19 +254,55 @@ def replace_nib(nib_file, code, appname):
     plist_to_binary(nib_file)
 
 
-def convert_to_icns(png, output_dir):
+def convert_to_icns(png, output_dir, actool=""):
     '''Takes a png file and attempts to convert it to an icns set'''
-    iconset = os.path.join(output_dir, 'AppIcns.iconset')
+    icon_dir = os.path.join(output_dir, 'icons')
+    os.mkdir(icon_dir)
+    xcassets = os.path.join(icon_dir, 'Assets.xcassets')
+    os.mkdir(xcassets)
+    iconset = os.path.join(xcassets, 'AppIcon.appiconset')
     os.mkdir(iconset)
+    contents = {}
+    contents['images'] = []
     for hw, suffix in ICON_SIZES:
+        scale = '1x'
+        if suffix.endswith('2x'):
+            scale = '2x'
         cmd = [SIPS, '-z', hw, hw, png,
                '--out', os.path.join(iconset, 'icon_%s.png' % suffix)]
         run_cmd(cmd)
-    icns = os.path.join(output_dir, 'AppIcns.icns')
-    cmd = [ICONUTIL, '-c', 'icns', iconset,
+        if suffix.endswith('2x'):
+            hw = str(int(hw) / 2)
+        image = dict(size='%sx%s' % (hw, hw),
+                     idiom='mac',
+                     filename='icon_%s.png' % suffix,
+                     scale=scale)
+        contents['images'].append(image)
+    icns = os.path.join(icon_dir, 'AppIcon.icns')
+    # Munki 3.6+ has an Assets.car which is compiled from the Assets.xcassets
+    # to provide the AppIcon
+    if actool:
+        with open(os.path.join(iconset, 'Contents.json'), 'w') as f:
+            json.dump(contents, f)
+        cmd = [actool,
+            '--compile', icon_dir,
+            '--app-icon', 'AppIcon',
+            '--minimum-deployment-target', '10.8',
+            '--output-partial-info-plist', os.path.join(icon_dir, 'Info.plist'),
+            '--platform', 'macosx',
+            '--errors',
+            '--warnings',
+            xcassets]
+        run_cmd(cmd)
+    else:
+        # Old behaviour for < 3.6
+        cmd = [ICONUTIL, '-c', 'icns', iconset,
            '-o', icns]
-    run_cmd(cmd)
-    return icns
+        run_cmd(cmd)
+
+    car = os.path.join(icon_dir, 'Assets.car')
+
+    return icns, car or None
 
 
 def sign_package(signing_id, pkg):
@@ -305,15 +358,24 @@ def main():
               "munki installer pkg!"
         sys.exit(1)
 
+
+
     verbose = args.verbose
     outfilename = args.output_file or "munkitools"
+
+    # Look for actool
+    actool = next((x for x in ACTOOL if os.path.isfile(x)), None)
+    if not actool:
+        print "WARNING: actool not found. Icon file will not be replaced in " \
+             "Munki 3.6 and higher. See README for more info."
 
     if args.icon_file and os.path.isfile(args.icon_file):
         if fnmatch.fnmatch(args.icon_file, '*.png'):
             # Attempt to convert png to icns
             print "Converting .png file to .icns..."
-            args.icon_file = convert_to_icns(args.icon_file,
-                                             tmp_dir)
+            args.icon_file, car = convert_to_icns(args.icon_file,
+                                             tmp_dir,
+                                             actool=actool)
     output = os.path.join(tmp_dir, 'munkitools.pkg')
 
 
@@ -383,10 +445,22 @@ def main():
                             if fnmatch.fnmatch(lfile, '*.nib'):
                                 replace_nib(lfile, code, args.appname)
             if args.icon_file:
-                icon_path = os.path.join(app['path'], app['icon'])
+                for icon in app['icon']:
+                    if os.path.isfile(
+                         os.path.join(app_payload,
+                                      os.path.join(app['path'], icon))):
+                        print (app['path'], icon)
+                        found_icon = icon
+                        break
+                icon_path = os.path.join(app['path'], found_icon)
                 dest = os.path.join(app_payload, icon_path)
-                print "Replacing icons with %s in %s..." % (args.icon_file, dest)
+                print "Replacing icons with %s in %s..." % (args.icon_file,
+                                                            dest)
                 shutil.copyfile(args.icon_file, dest)
+                if car:
+                    car_path = os.path.join(app['path'], 'Assets.car')
+                    dest = os.path.join(app_payload, car_path)
+                    shutil.copyfile(car, dest)
 
         # Make a new root for the distribution product
         newroot = os.path.join(tmp_dir, 'newroot')
