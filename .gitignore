@@ -1,3 +1,7 @@
 *.pkg
 *.sw*
 *.icns
+munkitools*
+.DS_Store
+orchard*
+*.pyc

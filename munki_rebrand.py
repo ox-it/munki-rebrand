@@ -44,6 +44,9 @@ APPNAME_LOCALIZED = {
     'da': u'Managed Software Center',
     'de': u'Geführte Softwareaktualisierung',
     'en': u'Managed Software Center',
+    'en-AU': u'Managed Software Centre',
+    'en-GB': u'Managed Software Centre',
+    'en-CA': u'Managed Software Centre',
     'en_AU': u'Managed Software Centre',
     'en_GB': u'Managed Software Centre',
     'en_CA': u'Managed Software Centre',
@@ -59,11 +62,11 @@ APPNAME_LOCALIZED = {
 }
 
 MSC_APP = {'path': 'Applications/Managed Software Center.app/Contents/Resources',
-           'icon': 'Managed Software Center.icns'}
+           'icon': ['Managed Software Center.icns', 'AppIcon.icns']}
 MS_APP = {'path': os.path.join(MSC_APP['path'], 'MunkiStatus.app/Contents/Resources'),
-          'icon': 'MunkiStatus.icns'}
+          'icon': ['MunkiStatus.icns', 'AppIcon.icns']}
 
-APPS = [ MSC_APP, MS_APP ]
+APPS = [MSC_APP, MS_APP]
 
 ICON_SIZES = [('16', '16x16'), ('32', '16x16@2x'),
               ('32', '32x32'), ('64', '32x32@2x'),
@@ -80,12 +83,15 @@ PLUTIL = '/usr/bin/plutil'
 SIPS = '/usr/bin/sips'
 ICONUTIL = '/usr/bin/iconutil'
 CURL = '/usr/bin/curl'
+ACTOOL = ['/usr/bin/actool',
+          '/Applications/Xcode.app/Contents/Developer/usr/bin/actool']
 
 MUNKIURL = 'https://api.github.com/repos/munki/munki/releases/latest'
 
 global verbose
 verbose = False
 tmp_dir = mkdtemp()
+
 
 @atexit.register
 def cleanup():
@@ -119,6 +125,7 @@ def get_latest_munki_url():
     api_result = json.loads(j)
     return api_result['assets'][0]['browser_download_url']
 
+
 def download_pkg(url, output):
     print "Downloading munkitools from %s..." % url
     cmd = [CURL,
@@ -144,7 +151,7 @@ def expand_payload(payload, directory):
     '''Expands a pkg payload to a directory'''
     cmd = [DITTO]
     # Ditto verbose is to stderr :(
-    #if verbose:
+    # if verbose:
     #    cmd.extend(['-v'])
     cmd.extend(['-x', payload, directory])
     run_cmd(cmd)
@@ -196,6 +203,16 @@ def plist_to_binary(plist):
     run_cmd(cmd)
 
 
+def guess_encoding(string):
+    encodings = ['ascii', 'utf-8', 'utf-16']
+    for encoding in encodings:
+        try:
+            string.decode(encoding)
+            return encoding
+        except UnicodeError:
+            continue
+
+
 def replace_strings(strings_file, code, appname):
     '''Replaces localized app name in a .strings file with desired app name'''
     localized = APPNAME_LOCALIZED[code]
@@ -204,8 +221,14 @@ def replace_strings(strings_file, code, appname):
                                                          strings_file,
                                                          appname)
     backup_file = '%s.bak' % strings_file
-    with io.open(backup_file, 'w', encoding='utf-16') as fw, \
-         io.open(strings_file, 'r', encoding='utf-16') as fr:
+    with open(strings_file, 'rb') as f:
+        rawdata = f.read()
+        enc = guess_encoding(rawdata)
+
+    # OK then, pep8...
+    with io.open(backup_file, 'w',
+                 encoding=enc) as fw, io.open(strings_file, 'r',
+                                              encoding=enc) as fr:
         for line in fr:
             # We want to only replace on the right hand side of any =
             # and we don't want to do it to a comment
@@ -227,7 +250,9 @@ def replace_nib(nib_file, code, appname):
                                                          appname)
     backup_file = '%s.bak' % nib_file
     plist_to_xml(nib_file)
-    with io.open(backup_file, 'w', encoding='utf-8') as fw,  io.open(nib_file, 'r', encoding='utf-8') as fr:
+    with io.open(backup_file, 'w',
+                 encoding='utf-8') as fw,  io.open(nib_file, 'r',
+                                                   encoding='utf-8') as fr:
         for line in fr:
             # Simpler than mucking about with plistlib
             line = line.replace(localized, appname.decode('utf-8'))
@@ -237,19 +262,61 @@ def replace_nib(nib_file, code, appname):
     plist_to_binary(nib_file)
 
 
-def convert_to_icns(png, output_dir):
+def convert_to_icns(png, output_dir, actool=""):
     '''Takes a png file and attempts to convert it to an icns set'''
-    iconset = os.path.join(output_dir, 'AppIcns.iconset')
+    icon_dir = os.path.join(output_dir, 'icons')
+    os.mkdir(icon_dir)
+    xcassets = os.path.join(icon_dir, 'Assets.xcassets')
+    os.mkdir(xcassets)
+    iconset = os.path.join(xcassets, 'AppIcon.appiconset')
     os.mkdir(iconset)
+    contents = {}
+    contents['images'] = []
     for hw, suffix in ICON_SIZES:
+        scale = '1x'
+        if suffix.endswith('2x'):
+            scale = '2x'
         cmd = [SIPS, '-z', hw, hw, png,
                '--out', os.path.join(iconset, 'icon_%s.png' % suffix)]
         run_cmd(cmd)
-    icns = os.path.join(output_dir, 'AppIcns.icns')
-    cmd = [ICONUTIL, '-c', 'icns', iconset,
-           '-o', icns]
-    run_cmd(cmd)
-    return icns
+        if suffix.endswith('2x'):
+            hw = str(int(hw) / 2)
+        image = dict(size='%sx%s' % (hw, hw),
+                     idiom='mac',
+                     filename='icon_%s.png' % suffix,
+                     scale=scale)
+        contents['images'].append(image)
+    icns = os.path.join(icon_dir, 'AppIcon.icns')
+
+    # Munki 3.6+ has an Assets.car which is compiled from the Assets.xcassets
+    # to provide the AppIcon
+    if actool:
+        with open(os.path.join(iconset, 'Contents.json'), 'w') as f:
+            json.dump(contents, f)
+        cmd = [actool,
+               '--compile', icon_dir,
+               '--app-icon', 'AppIcon',
+               '--minimum-deployment-target', '10.8',
+               '--output-partial-info-plist', os.path.join(icon_dir,
+                                                           'Info.plist'),
+               '--platform', 'macosx',
+               '--errors',
+               '--warnings',
+               xcassets]
+        run_cmd(cmd)
+    else:
+        # Old behaviour for < 3.6
+        cmd = [ICONUTIL, '-c', 'icns', iconset,
+               '-o', icns]
+        run_cmd(cmd)
+
+    carpath = os.path.join(icon_dir, 'Assets.car')
+    if os.path.isfile(carpath):
+        car = carpath
+    else:
+        car = None
+
+    return icns, car
 
 
 def sign_package(signing_id, pkg):
@@ -273,15 +340,14 @@ def main():
     p.add_argument('-a', '--appname', action='store',
                    required=True,
                    help="Your desired app name for Managed Software "
-                   "Center."),
+                   "Center.")
     p.add_argument('-k', '--pkg', action='store',
                    help="Prebuilt munkitools pkg to rebrand."),
     p.add_argument('-i', '--icon-file', action='store',
                    default=None,
                    help="Optional icon file to replace Managed Software "
-                   "Center's. Can be a .icns file or a 1024x1024 .png with "
-                   "alpha channel, in which case it will be converted to an "
-                   ".icns")
+                   "Center's. Should be a 1024x1024 .png with "
+                   "alpha channel")
     p.add_argument('-o', '--output-file', action='store',
                    default=None,
                    help="Optional base name for the customized pkg "
@@ -305,17 +371,24 @@ def main():
               "munki installer pkg!"
         sys.exit(1)
 
+    global verbose
     verbose = args.verbose
     outfilename = args.output_file or "munkitools"
+
+    # Look for actool
+    actool = next((x for x in ACTOOL if os.path.isfile(x)), None)
+    if not actool:
+        print "WARNING: actool not found. Icon file will not be replaced in " \
+             "Munki 3.6 and higher. See README for more info."
 
     if args.icon_file and os.path.isfile(args.icon_file):
         if fnmatch.fnmatch(args.icon_file, '*.png'):
             # Attempt to convert png to icns
             print "Converting .png file to .icns..."
-            args.icon_file = convert_to_icns(args.icon_file,
-                                             tmp_dir)
+            args.icon_file, car = convert_to_icns(args.icon_file,
+                                                  tmp_dir,
+                                                  actool=actool)
     output = os.path.join(tmp_dir, 'munkitools.pkg')
-
 
     if not args.pkg:
         download_pkg(get_latest_munki_url(), output)
@@ -366,6 +439,7 @@ def main():
         shutil.rmtree(app_pkg)
 
         # Find the lproj directories in the apps' Resources dirs
+        print "Replacing app name with %s..." % args.appname
         for app in APPS:
             resources_dir = os.path.join(app_payload, app['path'])
             # Get a list of all the lproj dirs in each app's Resources dir
@@ -383,10 +457,23 @@ def main():
                             if fnmatch.fnmatch(lfile, '*.nib'):
                                 replace_nib(lfile, code, args.appname)
             if args.icon_file:
-                icon_path = os.path.join(app['path'], app['icon'])
+                for icon in app['icon']:
+                    if os.path.isfile(
+                         os.path.join(app_payload,
+                                      os.path.join(app['path'], icon))):
+                        found_icon = icon
+                        break
+                icon_path = os.path.join(app['path'], found_icon)
                 dest = os.path.join(app_payload, icon_path)
-                print "Replacing icons with %s in %s..." % (args.icon_file, dest)
+                print "Replacing icons in %s with %s..." % (dest,
+                                                            args.icon_file)
                 shutil.copyfile(args.icon_file, dest)
+                if car:
+                    car_path = os.path.join(app['path'], 'Assets.car')
+                    dest = os.path.join(app_payload, car_path)
+                    if os.path.isfile(dest):
+                        shutil.copyfile(car, dest)
+                        print "Replacing icons in %s with %s..." % (dest,car)
 
         # Make a new root for the distribution product
         newroot = os.path.join(tmp_dir, 'newroot')
@@ -425,6 +512,7 @@ def main():
 
     else:
         print "Could not find munkitools pkg %s." % args.pkg
+
 
 if __name__ == '__main__':
     main()
