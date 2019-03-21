@@ -227,7 +227,7 @@ def replace_strings(strings_file, code, appname):
 
     # OK then, pep8...
     with io.open(backup_file, 'w',
-                 encoding=enc) as fw, io.open(strings_file, 'r',
+                 encoding='utf-8') as fw, io.open(strings_file, 'r',
                                               encoding=enc) as fr:
         for line in fr:
             # We want to only replace on the right hand side of any =
