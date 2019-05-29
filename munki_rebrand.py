@@ -37,6 +37,7 @@ import glob
 import fnmatch
 import io
 import json
+import imghdr
 
 APPNAME = 'Managed Software Center'
 
@@ -261,6 +262,11 @@ def replace_nib(nib_file, code, appname):
     os.rename(backup_file, nib_file)
     plist_to_binary(nib_file)
 
+def icon_test(png):
+    # Check if icon is png
+    if imghdr.what(png) == "png":
+        return True
+    return False
 
 def convert_to_icns(png, output_dir, actool=""):
     '''Takes a png file and attempts to convert it to an icns set'''
@@ -382,12 +388,17 @@ def main():
              "Munki 3.6 and higher. See README for more info."
 
     if args.icon_file and os.path.isfile(args.icon_file):
-        if fnmatch.fnmatch(args.icon_file, '*.png'):
+        if icon_test(args.icon_file):
             # Attempt to convert png to icns
             print "Converting .png file to .icns..."
             args.icon_file, car = convert_to_icns(args.icon_file,
                                                   tmp_dir,
                                                   actool=actool)
+        else:
+            print "ERROR: icon file must be a 1024x1024 .png"
+            sys.exit(1)
+
+
     output = os.path.join(tmp_dir, 'munkitools.pkg')
 
     if not args.pkg:
