@@ -29,7 +29,7 @@ To specify the output filename of your custom pkg use ```--output-file```. For e
 
 The ```--sign-package``` option allows you to have a rebranded munki package that is also natively signed. To use this option, your Developer Installer Certificate must be installed into the keychain. When using this option, you must specify the entire ```Common Name``` of the certificate. Example: ```"Developer ID Installer: Munki (U8PN57A5N2)"```
 
-The ```--sign-binaries``` option allows you to recursively sign the app binaries for the rebranded Managed Software Center, allowing for notarization of the pkg. To use this option, your Developer Installer Certificate must be installed into the keychain. When using this option, you must specify the entire ```Common Name``` of the certificate. Example: ```"Developer ID Applications: Munki (U8PN57A5N2)"```
+The ```--sign-binaries``` option allows you to recursively sign the app binaries for the rebranded Managed Software Center, allowing for notarization of the pkg. To use this option, your Developer Application Certificate must be installed into the keychain. When using this option, you must specify the entire ```Common Name``` of the certificate. Example: ```"Developer ID Applications: Munki (U8PN57A5N2)"```
 
 For usage help please see ```sudo ./munki_rebrand.py --help```
 
