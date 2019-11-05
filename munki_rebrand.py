@@ -62,9 +62,9 @@ APPNAME_LOCALIZED = {
     'sv': u'Managed Software Center'
 }
 
-MSC_APP = {'path': 'Applications/Managed Software Center.app/Contents/Resources',
+MSC_APP = {'path': 'Applications/Managed Software Center.app',
            'icon': ['Managed Software Center.icns', 'AppIcon.icns']}
-MS_APP = {'path': os.path.join(MSC_APP['path'], 'MunkiStatus.app/Contents/Resources'),
+MS_APP = {'path': os.path.join(MSC_APP['path'], 'MunkiStatus.app'),
           'icon': ['MunkiStatus.icns', 'AppIcon.icns']}
 
 APPS = [MSC_APP, MS_APP]
@@ -79,6 +79,7 @@ PKGBUILD = '/usr/bin/pkgbuild'
 PKGUTIL = '/usr/sbin/pkgutil'
 PRODUCTBUILD = '/usr/bin/productbuild'
 PRODUCTSIGN = '/usr/bin/productsign'
+CODESIGN = '/usr/bin/codesign'
 DITTO = '/usr/bin/ditto'
 PLUTIL = '/usr/bin/plutil'
 SIPS = '/usr/bin/sips'
@@ -331,10 +332,20 @@ def sign_package(signing_id, pkg):
            '--sign', signing_id,
            pkg,
            '%s-signed' % pkg]
+    print "Signing pkg..."
     run_cmd(cmd)
     print "Moving %s-signed to %s..." % (pkg, pkg)
     os.rename('%s-signed' % pkg, pkg)
 
+def sign_binary(signing_id, binary):
+    ''' Signs a binary with a signing id and enables hardened runtime'''
+    cmd = [CODESIGN,
+           '--sign', signing_id,
+           '--deep',
+           '--verbose',
+           '--options', 'runtime',
+           binary]
+    run_cmd(cmd)
 
 def main():
     p = argparse.ArgumentParser(description="Rebrands Munki's Managed Software "
@@ -367,7 +378,13 @@ def main():
                    help="Optional sign the munki distribution package with a "
                    "Developer ID Installer certificate from keychain. Provide "
                    "the certificate's Common Name. Ex: "
-                   "'Developer ID Installer: Munki (U8PN57A5N2)'")
+                   "'Developer ID Installer: Munki (U8PN57A5N2)'"),
+    p.add_argument('-S', '--sign-binaries', action='store',
+                   default=None,
+                   help="Optionally sign the munki app binaries with a "
+                   "Developer ID Application certificate from keychain. "
+                   "Provide the certirficate's Common Name. Ex: "
+                   "'Developer ID Application  Munki (U8PN57A5N2)'"),
     p.add_argument('-v', '--verbose', action='store_true',
                    help="Be more verbose")
     args = p.parse_args()
@@ -452,7 +469,8 @@ def main():
         # Find the lproj directories in the apps' Resources dirs
         print "Replacing app name with %s..." % args.appname
         for app in APPS:
-            resources_dir = os.path.join(app_payload, app['path'])
+            app_dir = os.path.join(app_payload, app['path'])
+            resources_dir = os.path.join(app_dir, 'Contents/Resources')
             # Get a list of all the lproj dirs in each app's Resources dir
             lproj_dirs = glob.glob(os.path.join(resources_dir, '*.lproj'))
             for lproj_dir in lproj_dirs:
@@ -485,6 +503,17 @@ def main():
                     if os.path.isfile(dest):
                         shutil.copyfile(car, dest)
                         print "Replacing icons in %s with %s..." % (dest,car)
+
+        if args.sign_binaries:
+            binaries = [
+             "Applications/Managed Software Center.app/Contents/PlugIns/MSCDockTilePlugin.docktileplugin",
+             "Applications/Managed Software Center.app/Contents/Resources/MunkiStatus.app",
+             "Applications/Managed Software Center.app/Contents/Resources/munki-notifier.app",
+             "Applications/Managed Software Center.app"
+            ]
+            for binary in binaries:
+                print "signing %s..." % binary
+                sign_binary(args.sign_binaries, os.path.join(app_payload, binary))
 
         # Make a new root for the distribution product
         newroot = os.path.join(tmp_dir, 'newroot')
