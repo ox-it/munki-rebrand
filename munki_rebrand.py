@@ -64,7 +64,8 @@ APPNAME_LOCALIZED = {
 
 MSC_APP = {'path': 'Applications/Managed Software Center.app',
            'icon': ['Managed Software Center.icns', 'AppIcon.icns']}
-MS_APP = {'path': os.path.join(MSC_APP['path'], 'MunkiStatus.app'),
+MS_APP = {'path': os.path.join(MSC_APP['path'], 'Contents/Resources',
+                               'MunkiStatus.app'),
           'icon': ['MunkiStatus.icns', 'AppIcon.icns']}
 
 APPS = [MSC_APP, MS_APP]
@@ -489,16 +490,22 @@ def main():
                 for icon in app['icon']:
                     if os.path.isfile(
                          os.path.join(app_payload,
-                                      os.path.join(app['path'], icon))):
+                                      os.path.join(app['path'],
+                                                   'Contents/Resources',
+                                                   icon))):
                         found_icon = icon
                         break
-                icon_path = os.path.join(app['path'], found_icon)
+                icon_path = os.path.join(app['path'],
+                                         'Contents/Resources',
+                                         found_icon)
                 dest = os.path.join(app_payload, icon_path)
                 print "Replacing icons in %s with %s..." % (dest,
                                                             args.icon_file)
                 shutil.copyfile(args.icon_file, dest)
                 if car:
-                    car_path = os.path.join(app['path'], 'Assets.car')
+                    car_path = os.path.join(app['path'],
+                                            'Contents/Resources',
+                                            'Assets.car')
                     dest = os.path.join(app_payload, car_path)
                     if os.path.isfile(dest):
                         shutil.copyfile(car, dest)
