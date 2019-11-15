@@ -19,7 +19,7 @@ It will either:
 
 Please note: munki_rebrand must be run as root in order to successfully build the output pkg.
 
-At its simplest you can use ```sudo ./munki_rebrand.py --appname "Amazing Software Center"``` to download the latest munkitools pkg from Github, and rename Managed Software Center to Amazing Software Center in the Finder in all localized versions of "Managed Software Center".
+At its simplest you can use ```sudo python ./munki_rebrand.py --appname "Amazing Software Center"``` to download the latest munkitools pkg from Github, and rename Managed Software Center to Amazing Software Center in the Finder in all localized versions of "Managed Software Center".
 
 If you specify ```--pkg``` you can use either a pathname on disk to a prebuilt munkitools pkg or use an http/s URL to download one, which munki_rebrand will then attempt to rebrand.
 
