@@ -42,6 +42,7 @@ import imghdr
 APPNAME = 'Managed Software Center'
 
 APPNAME_LOCALIZED = {
+    'Base': u'Managed Software Center',
     'da': u'Managed Software Center',
     'de': u'Geführte Softwareaktualisierung',
     'en': u'Managed Software Center',
