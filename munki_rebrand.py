@@ -319,7 +319,7 @@ def convert_to_icns(png, output_dir, actool=""):
     # Munki 3.6+ has an Assets.car which is compiled from the Assets.xcassets
     # to provide the AppIcon
     if actool:
-        with io.open(os.path.join(iconset, "Contents.json"), "w") as f:
+        with io.open(os.path.join(iconset, "Contents.json"), "wb") as f:
             json.dump(contents, f)
         cmd = [
             actool,
