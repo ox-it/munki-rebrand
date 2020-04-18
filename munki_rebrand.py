@@ -177,9 +177,21 @@ def analyze(pkgroot, plist):
 
 def make_unrelocatable(plist):
     """Changes BundleIsRelocatable in component plist to false"""
-    p = plistlib.readPlist(plist)
-    p[0]["BundleIsRelocatable"] = False
-    plistlib.writePlist(p, plist)
+    try:
+        with open(plist, "rb") as fp:
+            p = plistlib.load(fp)
+    except AttributeError:
+        p = plistlib.readPlist(plist)
+        # fallback to readPlist for Python 2
+    for bundle in p:
+        if bundle.get("BundleIsRelocatable"):
+            bundle["BundleIsRelocatable"] = False
+    try:
+        with open(plist, "wb") as fp:
+            plistlib.dump(p, fp)
+    except AttributeError:
+        plistlib.writePlist(p, plist)
+        # fallback to writePlist for Python 2
 
 
 def pkgbuild(pkgroot, plist, identifier, version, script_dir, output_path):
