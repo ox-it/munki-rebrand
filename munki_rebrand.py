@@ -320,7 +320,12 @@ def convert_to_icns(png, output_dir, actool=""):
     # to provide the AppIcon
     if actool:
         with io.open(os.path.join(iconset, "Contents.json"), "w") as f:
-            json.dump(contents, f)
+            contentstring = json.dumps(contents)
+            try:
+                f.write(unicode(contentstring))
+            # Python 3
+            except NameError:
+                f.write(contentstring)
         cmd = [
             actool,
             "--compile",
@@ -563,7 +568,7 @@ def main():
 
         if args.sign_binaries:
             binaries = [
-                MSC_APP["path"] + "Contents/PlugIns/MSCDockTilePlugin.docktileplugin",
+                MSC_APP["path"] + "/Contents/PlugIns/MSCDockTilePlugin.docktileplugin",
                 MSC_APP["path"] + "/Contents/Resources/munki-notifier.app",
                 MSC_APP["path"],
                 MS_APP["path"],
