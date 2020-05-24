@@ -390,7 +390,7 @@ def main():
         "--appname",
         action="store",
         required=True,
-        help="Your desired app name for Managed Software " "Center.",
+        help="Your desired app name for Managed Software Center.",
     )
     p.add_argument(
         "-k", "--pkg", action="store", help="Prebuilt munkitools pkg to rebrand."
@@ -400,23 +400,22 @@ def main():
         "--icon-file",
         action="store",
         default=None,
-        help="Optional icon file to replace Managed Software "
-        "Center's. Should be a 1024x1024 .png with "
-        "alpha channel",
+        help="""Optional icon file to replace Managed Software Center's. Should be a
+         1024x1024 .png with alpha channel""",
     )
     p.add_argument(
         "-o",
         "--output-file",
         action="store",
         default=None,
-        help="Optional base name for the customized pkg " "outputted by this tool",
+        help="Optional base name for the customized pkg outputted by this tool",
     )
     p.add_argument(
         "-p",
         "--postinstall",
         action="store",
         default=None,
-        help="Optional postinstall script to include in the output " "pkg",
+        help="Optional postinstall script to include in the output pkg",
     )
     p.add_argument(
         "-s",
