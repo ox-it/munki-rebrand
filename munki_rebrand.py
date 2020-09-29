@@ -494,8 +494,7 @@ def main():
 
         # Grab just the first match of this glob to get the app pkg regardless
         # of version number
-        app_pkg = glob.glob(os.path.join(root_dir, "munkitools_app-*"))[0]
-        app_version = app_pkg.rsplit("-")[1].split(".pkg")[0]
+        app_pkg = glob.glob(os.path.join(root_dir, "munkitools_app[-.]*"))[0]
 
         # Get our munkitools version from existing Distribution file
         # (will be same as munki core)
@@ -503,6 +502,8 @@ def main():
         tree = ET.parse(distfile)
         r = tree.getroot()
         # Grab the first pkg-ref element (the one with the version)
+        pkgref = r.findall("pkg-ref[@id='com.googlecode.munki.app']")[0]
+        app_version = pkgref.attrib["version"]
         pkgref = r.findall("pkg-ref[@id='com.googlecode.munki.core']")[0]
         munki_version = pkgref.attrib["version"]
 
