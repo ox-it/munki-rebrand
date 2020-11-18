@@ -571,8 +571,8 @@ def main():
             binaries = [
                 MSC_APP["path"] + "/Contents/PlugIns/MSCDockTilePlugin.docktileplugin",
                 MSC_APP["path"] + "/Contents/Resources/munki-notifier.app",
-                MSC_APP["path"],
                 MS_APP["path"],
+                MSC_APP["path"],
             ]
             for binary in binaries:
                 print("signing %s..." % binary)
