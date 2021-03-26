@@ -1,11 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 # encoding: utf-8
 """
 munki_rebrand.py
 
 Script to rebrand and customise Munki's Managed Software Center
 
-Copyright (C) University of Oxford 2016-17
+Copyright (C) University of Oxford 2016-21
     Ben Goodstein <ben.goodstein at it.ox.ac.uk>
 
 Based on an original script by Arjen van Bochoven
@@ -37,6 +37,8 @@ import fnmatch
 import io
 import json
 import imghdr
+
+VERSION = "4.0.0"
 
 APPNAME = u"Managed Software Center"
 
@@ -109,7 +111,7 @@ verbose = False
 tmp_dir = mkdtemp()
 
 
-@atexit.register
+#@atexit.register
 def cleanup():
     print("Cleaning up...")
     try:
@@ -125,13 +127,13 @@ def run_cmd(cmd, ret=None):
     to search for in the output, returning the result"""
     proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
     out, err = proc.communicate()
-    if verbose and out != "":
-        print(out.rstrip())
+    if verbose and out != "" and not ret:
+        print(out.rstrip().decode())
     if proc.returncode != 0:
         print(err)
         sys.exit(1)
     if ret:
-        return out.rstrip()
+        return out.rstrip().decode()
 
 
 def get_latest_munki_url():
@@ -177,9 +179,11 @@ def analyze(pkgroot, plist):
 
 def make_unrelocatable(plist):
     """Changes BundleIsRelocatable in component plist to false"""
-    p = plistlib.readPlist(plist)
+    with open(plist, 'rb') as f:
+        p = plistlib.load(f)
     p[0]["BundleIsRelocatable"] = False
-    plistlib.writePlist(p, plist)
+    with open(plist, 'wb') as f:
+        plistlib.dump(p, f)
 
 
 def pkgbuild(pkgroot, plist, identifier, version, script_dir, output_path):
@@ -228,7 +232,10 @@ def plist_to_binary(plist):
 
 def guess_encoding(f):
     cmd = [FILE, "--brief", "--mime-encoding", f]
-    return run_cmd(cmd, ret=True).decode()
+    enc = run_cmd(cmd, ret=True)
+    if "ascii" in enc:
+        return "utf-8"
+    return enc
 
 
 def replace_strings(strings_file, code, appname):
@@ -302,7 +309,7 @@ def convert_to_icns(png, output_dir, actool=""):
             hw,
             png,
             "--out",
-            os.path.join(iconset, "icon_%s.png" % suffix),
+            os.path.join(iconset, "AppIcon_%s.png" % suffix),
         ]
         run_cmd(cmd)
         if suffix.endswith("2x"):
@@ -310,22 +317,19 @@ def convert_to_icns(png, output_dir, actool=""):
         image = dict(
             size="%sx%s" % (hw, hw),
             idiom="mac",
-            filename="icon_%s.png" % suffix,
+            filename="AppIcon_%s.png" % suffix,
             scale=scale,
         )
         contents["images"].append(image)
-    icns = os.path.join(icon_dir, "AppIcon.icns")
+    icnspath = os.path.join(icon_dir, "AppIcon.icns")
 
     # Munki 3.6+ has an Assets.car which is compiled from the Assets.xcassets
     # to provide the AppIcon
     if actool:
+        shutil.copytree("./Assets.xcassets/", xcassets, dirs_exist_ok=True)
         with io.open(os.path.join(iconset, "Contents.json"), "w") as f:
             contentstring = json.dumps(contents)
-            try:
-                f.write(unicode(contentstring))
-            # Python 3
-            except NameError:
-                f.write(contentstring)
+            f.write(contentstring)
         cmd = [
             actool,
             "--compile",
@@ -333,7 +337,7 @@ def convert_to_icns(png, output_dir, actool=""):
             "--app-icon",
             "AppIcon",
             "--minimum-deployment-target",
-            "10.8",
+            "10.11",
             "--output-partial-info-plist",
             os.path.join(icon_dir, "Info.plist"),
             "--platform",
@@ -349,12 +353,12 @@ def convert_to_icns(png, output_dir, actool=""):
         run_cmd(cmd)
 
     carpath = os.path.join(icon_dir, "Assets.car")
-    if os.path.isfile(carpath):
-        car = carpath
-    else:
-        car = None
+    if not os.path.isfile(carpath):
+        carpath = None
+    if not os.path.isfile(icnspath):
+        icnspath = None
 
-    return icns, car
+    return icnspath, carpath
 
 
 def sign_package(signing_id, pkg):
@@ -468,7 +472,7 @@ def main():
         if icon_test(args.icon_file):
             # Attempt to convert png to icns
             print("Converting .png file to .icns...")
-            args.icon_file, car = convert_to_icns(
+            icns, car = convert_to_icns(
                 args.icon_file, tmp_dir, actool=actool
             )
         else:
@@ -504,8 +508,8 @@ def main():
         # Grab the first pkg-ref element (the one with the version)
         pkgref = r.findall("pkg-ref[@id='com.googlecode.munki.app']")[0]
         app_version = pkgref.attrib["version"]
-        pkgref = r.findall("pkg-ref[@id='com.googlecode.munki.core']")[0]
-        munki_version = pkgref.attrib["version"]
+        product = r.findall("product[@id='com.googlecode.munki']")[0]
+        munki_version = product.attrib["version"]
 
         # Unpack the app pkg payload
         payload_file = os.path.join(app_pkg, "Payload")
@@ -545,19 +549,20 @@ def main():
                             if fnmatch.fnmatch(lfile, "*.nib"):
                                 replace_nib(lfile, code, args.appname)
             if args.icon_file:
-                for icon in app["icon"]:
-                    if os.path.isfile(
-                        os.path.join(
-                            app_payload,
-                            os.path.join(app["path"], "Contents/Resources", icon),
-                        )
-                    ):
-                        found_icon = icon
-                        break
-                icon_path = os.path.join(app["path"], "Contents/Resources", found_icon)
-                dest = os.path.join(app_payload, icon_path)
-                print("Replacing icons in %s with %s..." % (dest, args.icon_file))
-                shutil.copyfile(args.icon_file, dest)
+                if icns:
+                    for icon in app["icon"]:
+                        if os.path.isfile(
+                            os.path.join(
+                                app_payload,
+                                os.path.join(app["path"], "Contents/Resources", icon),
+                            )
+                        ):
+                            found_icon = icon
+                            break
+                    icon_path = os.path.join(app["path"], "Contents/Resources", found_icon)
+                    dest = os.path.join(app_payload, icon_path)
+                    print("Replacing icons in %s with %s..." % (dest, args.icon_file))
+                    shutil.copyfile(args.icon_file, dest)
                 if car:
                     car_path = os.path.join(
                         app["path"], "Contents/Resources", "Assets.car"
