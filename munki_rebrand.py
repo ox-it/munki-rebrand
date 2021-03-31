@@ -38,7 +38,7 @@ import io
 import json
 import imghdr
 
-VERSION = "4.0.0"
+VERSION = "4.0.1"
 
 APPNAME = u"Managed Software Center"
 
@@ -398,7 +398,6 @@ def main():
         "-a",
         "--appname",
         action="store",
-        required=True,
         help="Your desired app name for Managed Software Center.",
     )
     p.add_argument(
@@ -446,8 +445,24 @@ def main():
         "Provide the certirficate's Common Name. Ex: "
         "'Developer ID Application  Munki (U8PN57A5N2)'",
     ),
-    p.add_argument("-v", "--verbose", action="store_true", help="Be more verbose")
+    p.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Be more verbose"),
+    p.add_argument(
+        "-x",
+        "--version",
+        action="store_true",
+        help="Print version and exit"
+    )
     args = p.parse_args()
+    if not args.version and not args.appname:
+        p.error("-a or --appname is required")
+
+    if args.version:
+        print(VERSION)
+        sys.exit(0)
 
     if os.geteuid() != 0:
         print(
