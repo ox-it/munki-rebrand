@@ -2,7 +2,7 @@
 
 munki_rebrand is a script to rebrand the Managed Software Center app from Greg Neagle's [Munki](https://github.com/munki/munki). It allows you to give the app a different name in Finder (in all localized languages if required), modify its icon, and add an optional postinstall script to the installer pkg.
 
-This is version 3 of munki_rebrand. If you wish to use it to rebrand munki 3.6 or higher, you will need to have Xcode installed and have opened it and installed the extra components. The ability to provide your own .icns file has been removed and the icon will be generated from a 1024x1024px .png only.
+This is version 4 of munki_rebrand. If you wish to use it to rebrand munki 3.6 or higher, you will need to have Xcode installed and have opened it and installed the extra components. The ability to provide your own .icns file has been removed and the icon will be generated from a 1024x1024px .png only.
 
 It will either:
 
@@ -11,9 +11,9 @@ It will either:
 
 
 ## Pre-requisites
- * Apple Mac running OS X/macOS 10.12+ 
- * Xcode 10+ (opened once, components installed)
- * Python 2 (system Python is fine)
+ * Apple Mac running OS X/macOS 10.15+ 
+ * Xcode 12+ (opened once, components installed)
+ * Python3
 
 ## Usage
 
@@ -43,6 +43,7 @@ then try the following:
 sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 ```
 You can run ```sudo xcode-select -s /Library/Developer/CommandLineTools``` to revert this afterwards if you so wish.
+* The `Assets.xcassets folder` must be located in the same folder that `munki_rebrand.py` is run from
 * The app will still appear as ```Managed Software Center.app``` in the filesystem e.g. when viewed in Terminal. This is by design, in case the app is called or searched for by name by any other process. The changed name will only appear in Finder, the Dock, and the app's menu bar.
 * The pkg ids of ```com.google.munki.*``` are also left unchanged for similar reasons.
 
