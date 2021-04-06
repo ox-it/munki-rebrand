@@ -38,7 +38,7 @@ import io
 import json
 import imghdr
 
-VERSION = "4.0.1"
+VERSION = "4.0.2"
 
 APPNAME = u"Managed Software Center"
 
