@@ -327,11 +327,11 @@ def convert_to_icns(png, output_dir, actool=""):
     # to provide the AppIcon
     if actool:
         # Use context of the location of munki_rebrand.py to find the Assets.xcassets directory.
-        rebrand_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), os.pardir))
+        rebrand_dir = os.path.dirname(os.path.abspath(__file__))
         xc_assets_dir = os.path.join(rebrand_dir, 'Assets.xcassets/')
         if not os.path.isdir(xc_assets_dir):
-            print(f"The Assets.xcassets folder could not be found in {rebrand_dir}.\nMake sure it's in place, and then try again.")
-            exit(1)
+            print("The Assets.xcassets folder could not be found in %s.\nMake sure it's in place, and then try again." % rebrand_dir)
+            sys.exit(1)
         shutil.copytree(xc_assets_dir, xcassets, dirs_exist_ok=True)
         with io.open(os.path.join(iconset, "Contents.json"), "w") as f:
             contentstring = json.dumps(contents)
