@@ -111,7 +111,7 @@ verbose = False
 tmp_dir = mkdtemp()
 
 
-#@atexit.register
+@atexit.register
 def cleanup():
     print("Cleaning up...")
     try:
