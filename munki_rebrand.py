@@ -144,7 +144,7 @@ def get_latest_munki_url():
 
 
 def download_pkg(url, output):
-    print("Downloading munkitools from %s..." % url)
+    print(f"Downloading munkitools from {url}...")
     cmd = [CURL, "--location", "--output", output, url]
     run_cmd(cmd)
 
@@ -242,8 +242,8 @@ def replace_strings(strings_file, code, appname):
     """Replaces localized app name in a .strings file with desired app name"""
     localized = APPNAME_LOCALIZED[code]
     if verbose:
-        print("Replacing '%s' in %s with '%s'..." % (localized, strings_file, appname))
-    backup_file = "%s.bak" % strings_file
+        print(f"Replacing '{localized}' in {strings_file} with '{appname}'...")
+    backup_file = f"{strings_file}.bak"
     enc = guess_encoding(strings_file)
 
     # Could do this in place but im oldskool so
@@ -266,8 +266,8 @@ def replace_nib(nib_file, code, appname):
     """Replaces localized app name in a .nib file with desired app name"""
     localized = APPNAME_LOCALIZED[code]
     if verbose:
-        print("Replacing '%s' in %s with '%s'..." % (localized, nib_file, appname))
-    backup_file = "%s.bak" % nib_file
+        print(f"Replacing '{localized}' in {nib_file} with '{appname}'...")
+    backup_file = f"{nib_file}.bak"
     plist_to_xml(nib_file)
     with io.open(backup_file, "w", encoding="utf-8") as fw, io.open(
         nib_file, "r", encoding="utf-8"
@@ -309,15 +309,15 @@ def convert_to_icns(png, output_dir, actool=""):
             hw,
             png,
             "--out",
-            os.path.join(iconset, "AppIcon_%s.png" % suffix),
+            os.path.join(iconset, f"AppIcon_{suffix}.png"),
         ]
         run_cmd(cmd)
         if suffix.endswith("2x"):
             hw = str(int(hw) / 2)
         image = dict(
-            size="%sx%s" % (hw, hw),
+            size=f"{hw}x{hw}",
             idiom="mac",
-            filename="AppIcon_%s.png" % suffix,
+            filename=f"AppIcon_{suffix}.png",
             scale=scale,
         )
         contents["images"].append(image)
@@ -330,7 +330,8 @@ def convert_to_icns(png, output_dir, actool=""):
         rebrand_dir = os.path.dirname(os.path.abspath(__file__))
         xc_assets_dir = os.path.join(rebrand_dir, 'Assets.xcassets/')
         if not os.path.isdir(xc_assets_dir):
-            print("The Assets.xcassets folder could not be found in %s.\nMake sure it's in place, and then try again." % rebrand_dir)
+            print(f"The Assets.xcassets folder could not be found in {rebrand_dir}. "
+                  "Make sure it's in place, and then try again.")
             sys.exit(1)
         shutil.copytree(xc_assets_dir, xcassets, dirs_exist_ok=True)
         with io.open(os.path.join(iconset, "Contents.json"), "w") as f:
@@ -355,7 +356,7 @@ def convert_to_icns(png, output_dir, actool=""):
         run_cmd(cmd)
     else:
         # Old behaviour for < 3.6
-        cmd = [ICONUTIL, "-c", "icns", iconset, "-o", icns]
+        cmd = [ICONUTIL, "-c", "icns", iconset, "-o", icnspath]
         run_cmd(cmd)
 
     carpath = os.path.join(icon_dir, "Assets.car")
@@ -369,11 +370,11 @@ def convert_to_icns(png, output_dir, actool=""):
 
 def sign_package(signing_id, pkg):
     """Signs a pkg with a signing id"""
-    cmd = [PRODUCTSIGN, "--sign", signing_id, pkg, "%s-signed" % pkg]
+    cmd = [PRODUCTSIGN, "--sign", signing_id, pkg, f"{pkg}-signed"]
     print("Signing pkg...")
     run_cmd(cmd)
-    print("Moving %s-signed to %s..." % (pkg, pkg))
-    os.rename("%s-signed" % pkg, pkg)
+    print(f"Moving {pkg}-signed to {pkg}...")
+    os.rename(f"{pkg}-signed", pkg)
 
 
 def sign_binary(signing_id, binary):
@@ -543,15 +544,15 @@ def main():
         # Copy postinstall to scripts directory
         if args.postinstall and os.path.isfile(args.postinstall):
             dest = os.path.join(scripts_dir, "postinstall")
-            print("Copying postinstall script %s to %s..." % (args.postinstall, dest))
+            print(f"Copying postinstall script {args.postinstall} to {dest}...")
             shutil.copyfile(args.postinstall, dest)
-            print("Making %s executable..." % dest)
+            print(f"Making {dest} executable...")
             os.chmod(dest, 0o755)
         # Delete the old expanded pkg
         shutil.rmtree(app_pkg)
 
         # Find the lproj directories in the apps' Resources dirs
-        print("Replacing app name with %s..." % args.appname)
+        print(f"Replacing app name with {args.appname}...")
         for app in APPS:
             app_dir = os.path.join(app_payload, app["path"])
             resources_dir = os.path.join(app_dir, "Contents/Resources")
@@ -582,7 +583,7 @@ def main():
                             break
                     icon_path = os.path.join(app["path"], "Contents/Resources", found_icon)
                     dest = os.path.join(app_payload, icon_path)
-                    print("Replacing icons in %s with %s..." % (dest, args.icon_file))
+                    print(f"Replacing icons in {dest} with {args.icon_file}...")
                     shutil.copyfile(args.icon_file, dest)
                 if car:
                     car_path = os.path.join(
@@ -591,7 +592,7 @@ def main():
                     dest = os.path.join(app_payload, car_path)
                     if os.path.isfile(dest):
                         shutil.copyfile(car, dest)
-                        print("Replacing icons in %s with %s..." % (dest, car))
+                        print(f"Replacing icons in {dest} with {car}...")
 
         if args.sign_binaries:
             binaries = [
@@ -601,7 +602,7 @@ def main():
                 MSC_APP["path"],
             ]
             for binary in binaries:
-                print("signing %s..." % binary)
+                print(f"signing {binary}...")
                 sign_binary(args.sign_binaries, os.path.join(app_payload, binary))
 
         # Make a new root for the distribution product
@@ -632,16 +633,16 @@ def main():
             flatten_pkg(pkg, os.path.join(newroot, os.path.basename(pkg)))
         # Now build new distribution product using old dist file
         final_pkg = os.path.join(
-            os.getcwd(), "%s-%s.pkg" % (outfilename, munki_version)
+            os.getcwd(), f"{outfilename}-{munki_version}.pkg"
         )
-        print("Building output pkg at %s..." % final_pkg)
+        print(f"Building output pkg at {final_pkg}...")
         productbuild(distfile, newroot, final_pkg)
 
         if args.sign_package:
             sign_package(args.sign_package, final_pkg)
 
     else:
-        print("Could not find munkitools pkg %s." % args.pkg)
+        print(f"Could not find munkitools pkg {args.pkg}.")
 
 
 if __name__ == "__main__":
