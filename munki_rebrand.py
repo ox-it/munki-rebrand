@@ -500,6 +500,10 @@ def main():
         else:
             print("ERROR: icon file must be a 1024x1024 .png")
             sys.exit(1)
+    else:
+        print(f"ERROR: cannot find icon file {args.icon_file}")
+        sys.exit(1)
+
 
     output = os.path.join(tmp_dir, "munkitools.pkg")
 
