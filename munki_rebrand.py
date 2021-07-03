@@ -449,7 +449,7 @@ def main():
         default=None,
         help="Optionally sign the munki app binaries with a "
         "Developer ID Application certificate from keychain. "
-        "Provide the certirficate's Common Name. Ex: "
+        "Provide the certificate's Common Name. Ex: "
         "'Developer ID Application  Munki (U8PN57A5N2)'",
     ),
     p.add_argument(
