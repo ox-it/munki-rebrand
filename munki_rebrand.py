@@ -534,11 +534,11 @@ def sign_file(file_path, signing_id):
 
 def set_payload_perms(payload):
     """ Set root:admin throughout payload, passed to payload """
-	for root, dirs, files in os.walk(app_payload):
-		for dir_ in dirs:
-			os.chown(os.path.join(root, dir_), 0, 80)
-		for file_ in files:
-			os.chown(os.path.join(root, file_), 0, 80)
+    for root, dirs, files in os.walk(app_payload):
+        for dir_ in dirs:
+            os.chown(os.path.join(root, dir_), 0, 80)
+        for file_ in files:
+            os.chown(os.path.join(root, file_), 0, 80)
 
 def main():
     p = argparse.ArgumentParser(
@@ -785,12 +785,12 @@ def main():
             shutil.rmtree(python_pkg)
             python_output_pkg = os.path.join(newroot, os.path.basename(python_pkg))
             pkgbuild(
-				python_payload,
-				python_component_plist,
-				"com.googlecode.munki.python",
-				python_pkg_version,
-				python_pkg_scripts,
-				python_output_pkg,
+                python_payload,
+                python_component_plist,
+                "com.googlecode.munki.python",
+                python_pkg_version,
+                python_pkg_scripts,
+                python_output_pkg,
             )
             set_payload_perms(python_payload)
         set_payload_perms(app_payload)
