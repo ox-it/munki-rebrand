@@ -532,6 +532,13 @@ def sign_file(file_path, signing_id):
     ]
     run_cmd(cmd)
 
+def set_payload_perms(payload):
+    """ Set root:admin throughout payload, passed to payload """
+	for root, dirs, files in os.walk(app_payload):
+		for dir_ in dirs:
+			os.chown(os.path.join(root, dir_), 0, 80)
+		for file_ in files:
+			os.chown(os.path.join(root, file_), 0, 80)
 
 def main():
     p = argparse.ArgumentParser(
@@ -785,19 +792,8 @@ def main():
 				python_pkg_scripts,
 				python_output_pkg,
             )
-            # Set root:admin throughout payload
-            for root, dirs, files in os.walk(python_payload):
-                for dir_ in dirs:
-                    os.chown(os.path.join(root, dir_), 0, 80)
-                for file_ in files:
-                    os.chown(os.path.join(root, file_), 0, 80)
-
-        # Set root:admin throughout payload
-        for root, dirs, files in os.walk(app_payload):
-            for dir_ in dirs:
-                os.chown(os.path.join(root, dir_), 0, 80)
-            for file_ in files:
-                os.chown(os.path.join(root, file_), 0, 80)
+            set_payload_perms(python_payload)
+        set_payload_perms(app_payload)
         component_plist = os.path.join(tmp_dir, "component.plist")
         analyze(app_payload, component_plist)
         make_unrelocatable(component_plist)
