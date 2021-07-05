@@ -23,7 +23,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-from subprocess import Popen, PIPE
+from subprocess import check_output, Popen, PIPE
 import os
 import shutil
 from tempfile import mkdtemp
@@ -103,11 +103,13 @@ ACTOOL = [
     "/usr/bin/actool",
     "/Applications/Xcode.app/Contents/Developer/usr/bin/actool",
 ]
+FIND = "/usr/bin/find"
+PLISTBUDDY = "/usr/libexec/PlistBuddy"
 
 MUNKIURL = "https://api.github.com/repos/munki/munki/releases/latest"
 
 global verbose
-verbose = False
+verbose = True
 tmp_dir = mkdtemp()
 
 
@@ -392,6 +394,145 @@ def sign_binary(signing_id, binary):
     run_cmd(cmd)
 
 
+def sign_python(signing_id, python_payload):
+    """Signs a munki-python with a signing id and enables hardened runtime"""
+    python_ver = os.readlink(os.path.join(python_payload, 
+                                          "/usr/local/munki/Python.framework/Versions/Current"))
+    python_path = os.path.join(python_payload, 
+                               "usr/local/munki/Python.framework/Versions",
+                               python_ver)
+    
+    cmd = [
+        FIND,
+        os.path.join(python_path, "lib"),
+        "-type",
+        "f",
+        "-perm",
+        "-u=x",
+    ]
+    found_files = check_output(cmd).splitlines()
+    for found_file in found_files:
+        if verbose:
+            print(f"signing file {found_file}...")
+        sign_file(found_file, signing_id)
+
+
+    cmd = [
+        FIND,
+        os.path.join(python_path, "bin"),
+        "-type",
+        "f",
+        "-perm",
+        "-u=x",
+    ]
+    found_files = check_output(cmd).splitlines()
+    for found_file in found_files:
+        if verbose:
+            print(f"signing file {found_file}...")
+        sign_file(found_file, signing_id)
+    
+    cmd = [
+        FIND,
+        os.path.join(python_path, "lib"),
+        "-type",
+        "f",
+        "-name",
+        "*dylib",
+    ]
+    found_files = check_output(cmd).splitlines()
+    for found_file in found_files:
+        if verbose:
+            print(f"signing file {found_file}...")
+        sign_file(found_file, signing_id)
+    
+    cmd = [
+        FIND,
+        os.path.join(python_path, "lib"),
+        "-type",
+        "f",
+        "-name",
+        "*so",
+    ]
+    found_files = check_output(cmd).splitlines()
+    for found_file in found_files:
+        if verbose:
+            print(f"signing file {found_file}...")
+        sign_file(found_file, signing_id)
+    
+    cmd = [
+        FIND,
+        os.path.join(python_path, "lib"),
+        "-type",
+        "f",
+        "-name",
+        "*dylib",
+    ]
+
+    entitlements_path = os.path.join(python_payload, "/usr/local/munki/entitlements.plist")
+    if verbose:
+        print(f"Writing: {entitlements_path}...")
+    cmd = [
+        PLISTBUDDY,
+        "-c",
+        "Add :com.apple.security.cs.allow-unsigned-executable-memory bool true",
+        entitlements_path
+    ]
+
+    python_app_path = os.path.join(python_payload, 
+                                   "usr/local/munki/Python.framework/Versions", python_ver,
+                                   "Resources/Python.app")
+    if verbose:
+        print(f"signing: {python_app_path}...")
+    cmd = [
+       CODESIGN,
+       "--force",
+       "--options",
+       "runtime",
+       "--entitlements",
+       entitlements_path,
+       "--deep",
+       "--verbose",
+       "-s",
+       signing_id,
+       python_app_path
+    ]
+
+    if verbose:
+        print(f"signing: {python_path}...")
+    cmd = [
+       CODESIGN,
+       "--force",
+       "--options",
+       "runtime",
+       "--entitlements",
+       entitlements_path,
+       "--deep",
+       "--verbose",
+       "-s",
+       signing_id,
+       python_path
+    ]
+
+    python_framework = os.path.join(python_payload, "usr/local/munki/Python.framework")
+    if verbose:
+        print(f"signing: {python_framework}...")
+    sign_file(python_framework, signing_id)
+
+
+def sign_file(file_path, signing_id):
+    """ Signs file, passed to file_path  with id passed to signing_id"""
+    cmd = [
+       CODESIGN,
+       "--force",
+       "--deep",
+       "--verbose",
+       "-s",
+       signing_id,
+       file_path
+    ]
+    run_cmd(cmd)
+
+
 def main():
     p = argparse.ArgumentParser(
         description="Rebrands Munki's Managed Software "
@@ -447,7 +588,7 @@ def main():
         "--sign-binaries",
         action="store",
         default=None,
-        help="Optionally sign the munki app binaries with a "
+        help="Optionally sign the munki app binaries and munki-python with a "
         "Developer ID Application certificate from keychain. "
         "Provide the certificate's Common Name. Ex: "
         "'Developer ID Application  Munki (U8PN57A5N2)'",
@@ -503,7 +644,6 @@ def main():
     else:
         print(f"ERROR: cannot find icon file {args.icon_file}")
         sys.exit(1)
-
 
     output = os.path.join(tmp_dir, "munkitools.pkg")
 
@@ -598,6 +738,10 @@ def main():
                         shutil.copyfile(car, dest)
                         print(f"Replacing icons in {dest} with {car}...")
 
+        # Make a new root for the distribution product
+        newroot = os.path.join(tmp_dir, "newroot")
+        os.mkdir(newroot)
+
         if args.sign_binaries:
             binaries = [
                 MSC_APP["path"] + "/Contents/PlugIns/MSCDockTilePlugin.docktileplugin",
@@ -608,10 +752,45 @@ def main():
             for binary in binaries:
                 print(f"signing {binary}...")
                 sign_binary(args.sign_binaries, os.path.join(app_payload, binary))
-
-        # Make a new root for the distribution product
-        newroot = os.path.join(tmp_dir, "newroot")
-        os.mkdir(newroot)
+            # Unpack the python pkg payload
+            print("signing munki-python...")
+            python_pkg = glob.glob(os.path.join(root_dir, "munkitools_python.pkg"))[0]
+            python_payload_file = os.path.join(python_pkg, "Payload")
+            python_scripts = os.path.join(python_pkg, "Scripts")
+            python_payload = os.path.join(tmp_dir, "python_payload")
+            os.mkdir(python_payload)
+            python_pkg_resources = os.path.join(root_dir, "python_pkg_resources")
+            os.mkdir(python_pkg_resources)
+            python_pkg_scripts = os.path.join(python_pkg_resources, "Scripts")
+            print(python_pkg_scripts)
+            shutil.copytree(python_scripts, python_pkg_scripts)
+            expand_payload(python_payload_file, python_payload)
+            sign_python(args.sign_binaries, python_payload)
+            print("building munki-python pkg...")
+            python_pkgref = r.findall("pkg-ref[@id='com.googlecode.munki.python']")[0]
+            python_pkg_version = python_pkgref.attrib["version"]
+            if verbose:
+                print(f"com.googlecode.munki.python pkg version: {python_pkg_version}")
+            python_component_plist = os.path.join(python_pkg_resources, "munki_python_component.plist")
+            analyze(python_payload, python_component_plist)
+            make_unrelocatable(python_component_plist)
+            # Delete the old expanded pkg
+            shutil.rmtree(python_pkg)
+            python_output_pkg = os.path.join(newroot, os.path.basename(python_pkg))
+            pkgbuild(
+				python_payload,
+				python_component_plist,
+				"com.googlecode.munki.python",
+				python_pkg_version,
+				python_pkg_scripts,
+				python_output_pkg,
+            )
+            # Set root:admin throughout payload
+            for root, dirs, files in os.walk(python_payload):
+                for dir_ in dirs:
+                    os.chown(os.path.join(root, dir_), 0, 80)
+                for file_ in files:
+                    os.chown(os.path.join(root, file_), 0, 80)
 
         # Set root:admin throughout payload
         for root, dirs, files in os.walk(app_payload):
