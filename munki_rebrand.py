@@ -534,7 +534,7 @@ def sign_file(file_path, signing_id):
 
 def set_payload_perms(payload):
     """ Set root:admin throughout payload, passed to payload """
-    for root, dirs, files in os.walk(app_payload):
+    for root, dirs, files in os.walk(payload):
         for dir_ in dirs:
             os.chown(os.path.join(root, dir_), 0, 80)
         for file_ in files:
