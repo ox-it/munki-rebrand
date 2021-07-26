@@ -333,8 +333,7 @@ def sign_binary(
     deep=False,
     options=[],
     entitlements="",
-    force=False,
-):
+    force=False):
     """Signs a binary with a signing id, with optional arguments for command line
     args"""
     cmd = [CODESIGN, "--sign", signing_id]
@@ -355,13 +354,14 @@ def sign_binary(
 
 
 def is_signable_bin(path):
+    '''Checks if a path is a file and is executable'''
     if os.path.isfile(path) and (os.stat(path).st_mode & stat.S_IXUSR > 0):
         return True
     return False
 
 
 def is_signable_lib(path):
-    # Is executable file
+    '''Checks if a path is a file and ends with .so or .dylib'''
     if os.path.isfile(path) and (path.endswith(".so") or path.endswith(".dylib")):
         return True
     return False
@@ -561,12 +561,15 @@ def main():
                 os.chown(os.path.join(root, file_), 0, 80)
 
         if args.sign_binaries:
+            # Generate entitlements file for later
             entitlements = {
                 "com.apple.security.cs.allow-unsigned-executable-memory": True
             }
             ent_file = os.path.join(tmp_dir, "entitlements.plist")
             with open(ent_file, "wb") as f:
                 plistlib.dump(entitlements, f)
+
+            # Add the MSC app pkg binaries
             binaries = [
                 os.path.join(
                     app_payload,
@@ -581,6 +584,8 @@ def main():
                 os.path.join(app_payload, MS_APP["path"]),
                 os.path.join(app_payload, MSC_APP["path"]),
             ]
+
+            # Add the executable libs and bins in python pkg
             pylib = os.path.join(python_payload, PY_CUR, "lib")
             pybin = os.path.join(python_payload, PY_CUR, "bin")
             for pydir in pylib, pybin:
@@ -595,11 +600,16 @@ def main():
                     for file_ in files:
                         if is_signable_lib(os.path.join(root, file_)):
                             binaries.append(os.path.join(root, file_))
+
+            # Add binaries which need entitlements
             entitled_binaries = [
                 os.path.join(python_payload, PY_CUR, "Resources/Python.app"),
                 os.path.join(pybin, "python3"),
             ]
-            print("Signing binaries...")
+
+            # Sign all the binaries. The order is important. Which is why this is a bit
+            # gross
+            print("Signing binaries (this may take a while)...")
             for binary in binaries:
                 if verbose:
                     print(f"Signing {binary}...")
