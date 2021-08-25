@@ -39,7 +39,7 @@ import io
 import json
 import imghdr
 
-VERSION = "5.0"
+VERSION = "5.1"
 
 APPNAME = "Managed Software Center"
 
