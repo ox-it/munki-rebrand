@@ -23,7 +23,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-from subprocess import Popen, PIPE
+import subprocess
 import os
 import stat
 import shutil
@@ -128,15 +128,14 @@ def cleanup():
 def run_cmd(cmd, ret=None):
     """Runs a command passed in as a list. Can also be provided with a regex
     to search for in the output, returning the result"""
-    proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
-    out, err = proc.communicate()
-    if verbose and out != "" and not ret:
-        print(out.rstrip().decode())
+    proc = subprocess.run(cmd, capture_output=True)
+    if verbose and proc.stdout != b"" and not ret:
+        print(proc.stdout.rstrip().decode())
     if proc.returncode != 0:
-        print(err)
+        print(proc.stderr.rstrip().decode())
         sys.exit(1)
     if ret:
-        return out.rstrip().decode()
+        return proc.stdout.rstrip().decode()
 
 
 def get_latest_munki_url():
