@@ -23,8 +23,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-from subprocess import Popen, PIPE
+import subprocess
 import os
+import stat
 import shutil
 from tempfile import mkdtemp
 from xml.etree import ElementTree as ET
@@ -38,30 +39,30 @@ import io
 import json
 import imghdr
 
-VERSION = "4.1"
+VERSION = "5.0"
 
-APPNAME = u"Managed Software Center"
+APPNAME = "Managed Software Center"
 
 APPNAME_LOCALIZED = {
-    "Base": u"Managed Software Center",
-    "da": u"Managed Software Center",
-    "de": u"Geführte Softwareaktualisierung",
-    "en": u"Managed Software Center",
-    "en-AU": u"Managed Software Centre",
-    "en-GB": u"Managed Software Centre",
-    "en-CA": u"Managed Software Centre",
-    "en_AU": u"Managed Software Centre",
-    "en_GB": u"Managed Software Centre",
-    "en_CA": u"Managed Software Centre",
-    "es": u"Centro de aplicaciones",
-    "fi": u"Managed Software Center",
-    "fr": u"Centre de gestion des logiciels",
-    "it": u"Centro Gestione Applicazioni",
-    "ja": u"Managed Software Center",
-    "nb": u"Managed Software Center",
-    "nl": u"Managed Software Center",
-    "ru": u"Центр Управления ПО",
-    "sv": u"Managed Software Center",
+    "Base": "Managed Software Center",
+    "da": "Managed Software Center",
+    "de": "Geführte Softwareaktualisierung",
+    "en": "Managed Software Center",
+    "en-AU": "Managed Software Centre",
+    "en-GB": "Managed Software Centre",
+    "en-CA": "Managed Software Centre",
+    "en_AU": "Managed Software Centre",
+    "en_GB": "Managed Software Centre",
+    "en_CA": "Managed Software Centre",
+    "es": "Centro de aplicaciones",
+    "fi": "Managed Software Center",
+    "fr": "Centre de gestion des logiciels",
+    "it": "Centro Gestione Applicazioni",
+    "ja": "Managed Software Center",
+    "nb": "Managed Software Center",
+    "nl": "Managed Software Center",
+    "ru": "Центр Управления ПО",
+    "sv": "Managed Software Center",
 }
 
 MSC_APP = {
@@ -74,6 +75,9 @@ MS_APP = {
 }
 
 APPS = [MSC_APP, MS_APP]
+
+PY_FWK = "usr/local/munki/Python.Framework"
+PY_CUR = os.path.join(PY_FWK, "Versions/Current")
 
 ICON_SIZES = [
     ("16", "16x16"),
@@ -93,7 +97,6 @@ PKGUTIL = "/usr/sbin/pkgutil"
 PRODUCTBUILD = "/usr/bin/productbuild"
 PRODUCTSIGN = "/usr/bin/productsign"
 CODESIGN = "/usr/bin/codesign"
-DITTO = "/usr/bin/ditto"
 FILE = "/usr/bin/file"
 PLUTIL = "/usr/bin/plutil"
 SIPS = "/usr/bin/sips"
@@ -125,15 +128,14 @@ def cleanup():
 def run_cmd(cmd, ret=None):
     """Runs a command passed in as a list. Can also be provided with a regex
     to search for in the output, returning the result"""
-    proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
-    out, err = proc.communicate()
-    if verbose and out != "" and not ret:
-        print(out.rstrip().decode())
+    proc = subprocess.run(cmd, capture_output=True)
+    if verbose and proc.stdout != b"" and not ret:
+        print(proc.stdout.rstrip().decode())
     if proc.returncode != 0:
-        print(err)
+        print(proc.stderr.rstrip().decode())
         sys.exit(1)
     if ret:
-        return out.rstrip().decode()
+        return proc.stdout.rstrip().decode()
 
 
 def get_latest_munki_url():
@@ -151,70 +153,13 @@ def download_pkg(url, output):
 
 def flatten_pkg(directory, pkg):
     """Flattens a pkg folder"""
-    cmd = [PKGUTIL, "--flatten", directory, pkg]
+    cmd = [PKGUTIL, "--flatten-full", directory, pkg]
     run_cmd(cmd)
 
 
 def expand_pkg(pkg, directory):
     """Expands a flat pkg to a folder"""
-    cmd = [PKGUTIL, "--expand", pkg, directory]
-    run_cmd(cmd)
-
-
-def expand_payload(payload, directory):
-    """Expands a pkg payload to a directory"""
-    cmd = [DITTO]
-    # Ditto verbose is to stderr :(
-    # if verbose:
-    #    cmd.extend(['-v'])
-    cmd.extend(["-x", payload, directory])
-    run_cmd(cmd)
-
-
-def analyze(pkgroot, plist):
-    """Analyzes a pkgroot to create a component plist"""
-    cmd = [PKGBUILD, "--analyze", "--root", pkgroot, plist]
-    run_cmd(cmd)
-
-
-def make_unrelocatable(plist):
-    """Changes BundleIsRelocatable in component plist to false"""
-    with open(plist, 'rb') as f:
-        p = plistlib.load(f)
-    p[0]["BundleIsRelocatable"] = False
-    with open(plist, 'wb') as f:
-        plistlib.dump(p, f)
-
-
-def pkgbuild(pkgroot, plist, identifier, version, script_dir, output_path):
-    """Uses a component plist to build a component pkg"""
-    cmd = [
-        PKGBUILD,
-        "--root",
-        pkgroot,
-        "--component-plist",
-        plist,
-        "--identifier",
-        identifier,
-        "--version",
-        version,
-        "--scripts",
-        script_dir,
-        output_path,
-    ]
-    run_cmd(cmd)
-
-
-def productbuild(distribution, pkg_path, output_path):
-    """Builds a product pkg from a product root and distribution file"""
-    cmd = [
-        PRODUCTBUILD,
-        "--distribution",
-        distribution,
-        "--package-path",
-        pkg_path,
-        output_path,
-    ]
+    cmd = [PKGUTIL, "--expand-full", pkg, directory]
     run_cmd(cmd)
 
 
@@ -326,12 +271,15 @@ def convert_to_icns(png, output_dir, actool=""):
     # Munki 3.6+ has an Assets.car which is compiled from the Assets.xcassets
     # to provide the AppIcon
     if actool:
-        # Use context of the location of munki_rebrand.py to find the Assets.xcassets directory.
+        # Use context of the location of munki_rebrand.py to find the Assets.xcassets
+        # directory.
         rebrand_dir = os.path.dirname(os.path.abspath(__file__))
-        xc_assets_dir = os.path.join(rebrand_dir, 'Assets.xcassets/')
+        xc_assets_dir = os.path.join(rebrand_dir, "Assets.xcassets/")
         if not os.path.isdir(xc_assets_dir):
-            print(f"The Assets.xcassets folder could not be found in {rebrand_dir}. "
-                  "Make sure it's in place, and then try again.")
+            print(
+                f"The Assets.xcassets folder could not be found in {rebrand_dir}. "
+                "Make sure it's in place, and then try again."
+            )
             sys.exit(1)
         shutil.copytree(xc_assets_dir, xcassets, dirs_exist_ok=True)
         with io.open(os.path.join(iconset, "Contents.json"), "w") as f:
@@ -377,19 +325,45 @@ def sign_package(signing_id, pkg):
     os.rename(f"{pkg}-signed", pkg)
 
 
-def sign_binary(signing_id, binary):
-    """ Signs a binary with a signing id and enables hardened runtime"""
-    cmd = [
-        CODESIGN,
-        "--sign",
-        signing_id,
-        "--deep",
-        "--verbose",
-        "--options",
-        "runtime",
-        binary,
-    ]
+def sign_binary(
+    signing_id,
+    binary,
+    verbose=False,
+    deep=False,
+    options=[],
+    entitlements="",
+    force=False):
+    """Signs a binary with a signing id, with optional arguments for command line
+    args"""
+    cmd = [CODESIGN, "--sign", signing_id]
+    if force:
+        cmd.append("--force")
+    if deep:
+        cmd.append("--deep")
+    if verbose:
+        cmd.append("--verbose")
+    if entitlements:
+        cmd.append("--entitlements")
+        cmd.append(entitlements)
+    if options:
+        cmd.append("--options")
+        cmd.append(",".join([option for option in options]))
+    cmd.append(binary)
     run_cmd(cmd)
+
+
+def is_signable_bin(path):
+    '''Checks if a path is a file and is executable'''
+    if os.path.isfile(path) and (os.stat(path).st_mode & stat.S_IXUSR > 0):
+        return True
+    return False
+
+
+def is_signable_lib(path):
+    '''Checks if a path is a file and ends with .so or .dylib'''
+    if os.path.isfile(path) and (path.endswith(".so") or path.endswith(".dylib")):
+        return True
+    return False
 
 
 def main():
@@ -439,7 +413,7 @@ def main():
         default=None,
         help="Optional sign the munki distribution package with a "
         "Developer ID Installer certificate from keychain. Provide "
-        "the certificate's Common Name. Ex: "
+        "the certificate's Common Name. e.g.: "
         "'Developer ID Installer: Munki (U8PN57A5N2)'",
     ),
     p.add_argument(
@@ -449,19 +423,12 @@ def main():
         default=None,
         help="Optionally sign the munki app binaries with a "
         "Developer ID Application certificate from keychain. "
-        "Provide the certirficate's Common Name. Ex: "
+        "Provide the certificate's Common Name. e.g.: "
         "'Developer ID Application  Munki (U8PN57A5N2)'",
     ),
+    p.add_argument("-v", "--verbose", action="store_true", help="Be more verbose"),
     p.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Be more verbose"),
-    p.add_argument(
-        "-x",
-        "--version",
-        action="store_true",
-        help="Print version and exit"
+        "-x", "--version", action="store_true", help="Print version and exit"
     )
     args = p.parse_args()
     if not args.version and not args.appname:
@@ -494,9 +461,7 @@ def main():
         if icon_test(args.icon_file):
             # Attempt to convert png to icns
             print("Converting .png file to .icns...")
-            icns, car = convert_to_icns(
-                args.icon_file, tmp_dir, actool=actool
-            )
+            icns, car = convert_to_icns(args.icon_file, tmp_dir, actool=actool)
         else:
             print("ERROR: icon file must be a 1024x1024 .png")
             sys.exit(1)
@@ -513,14 +478,12 @@ def main():
 
     if args.pkg and os.path.isfile(args.pkg):
         root_dir = os.path.join(tmp_dir, "root")
-
-        # Temporary directory for the app pkg scripts to reside
-        scripts_dir = os.path.join(tmp_dir, "scripts")
         expand_pkg(args.pkg, root_dir)
 
         # Grab just the first match of this glob to get the app pkg regardless
         # of version number
         app_pkg = glob.glob(os.path.join(root_dir, "munkitools_app[-.]*"))[0]
+        python_pkg = glob.glob(os.path.join(root_dir, "munkitools_python[-.]*"))[0]
 
         # Get our munkitools version from existing Distribution file
         # (will be same as munki core)
@@ -533,23 +496,16 @@ def main():
         product = r.findall("product[@id='com.googlecode.munki']")[0]
         munki_version = product.attrib["version"]
 
-        # Unpack the app pkg payload
-        payload_file = os.path.join(app_pkg, "Payload")
         app_scripts = os.path.join(app_pkg, "Scripts")
-        app_payload = os.path.join(tmp_dir, "payload")
-        os.mkdir(app_payload)
-        expand_payload(payload_file, app_payload)
-        # Preserve scripts
-        shutil.copytree(app_scripts, scripts_dir)
-        # Copy postinstall to scripts directory
+        app_payload = os.path.join(app_pkg, "Payload")
+        python_payload = os.path.join(python_pkg, "Payload")
+
         if args.postinstall and os.path.isfile(args.postinstall):
-            dest = os.path.join(scripts_dir, "postinstall")
+            dest = os.path.join(app_scripts, "postinstall")
             print(f"Copying postinstall script {args.postinstall} to {dest}...")
             shutil.copyfile(args.postinstall, dest)
             print(f"Making {dest} executable...")
             os.chmod(dest, 0o755)
-        # Delete the old expanded pkg
-        shutil.rmtree(app_pkg)
 
         # Find the lproj directories in the apps' Resources dirs
         print(f"Replacing app name with {args.appname}...")
@@ -581,7 +537,9 @@ def main():
                         ):
                             found_icon = icon
                             break
-                    icon_path = os.path.join(app["path"], "Contents/Resources", found_icon)
+                    icon_path = os.path.join(
+                        app["path"], "Contents/Resources", found_icon
+                    )
                     dest = os.path.join(app_payload, icon_path)
                     print(f"Replacing icons in {dest} with {args.icon_file}...")
                     shutil.copyfile(args.icon_file, dest)
@@ -594,50 +552,93 @@ def main():
                         shutil.copyfile(car, dest)
                         print(f"Replacing icons in {dest} with {car}...")
 
-        if args.sign_binaries:
-            binaries = [
-                MSC_APP["path"] + "/Contents/PlugIns/MSCDockTilePlugin.docktileplugin",
-                MSC_APP["path"] + "/Contents/Resources/munki-notifier.app",
-                MS_APP["path"],
-                MSC_APP["path"],
-            ]
-            for binary in binaries:
-                print(f"signing {binary}...")
-                sign_binary(args.sign_binaries, os.path.join(app_payload, binary))
-
-        # Make a new root for the distribution product
-        newroot = os.path.join(tmp_dir, "newroot")
-        os.mkdir(newroot)
-
         # Set root:admin throughout payload
-        for root, dirs, files in os.walk(app_payload):
+        for root, dirs, files in os.walk(root_dir):
             for dir_ in dirs:
                 os.chown(os.path.join(root, dir_), 0, 80)
             for file_ in files:
                 os.chown(os.path.join(root, file_), 0, 80)
-        component_plist = os.path.join(tmp_dir, "component.plist")
-        analyze(app_payload, component_plist)
-        make_unrelocatable(component_plist)
-        # Create app pkg in the newroot
-        output_pkg = os.path.join(newroot, os.path.basename(app_pkg))
-        pkgbuild(
-            app_payload,
-            component_plist,
-            "com.googlecode.munki.app",
-            app_version,
-            scripts_dir,
-            output_pkg,
-        )
-        # Flatten the other pkgs into newroot
-        for pkg in glob.glob(os.path.join(root_dir, "*.pkg")):
-            flatten_pkg(pkg, os.path.join(newroot, os.path.basename(pkg)))
-        # Now build new distribution product using old dist file
-        final_pkg = os.path.join(
-            os.getcwd(), f"{outfilename}-{munki_version}.pkg"
-        )
-        print(f"Building output pkg at {final_pkg}...")
-        productbuild(distfile, newroot, final_pkg)
 
+        if args.sign_binaries:
+            # Generate entitlements file for later
+            entitlements = {
+                "com.apple.security.cs.allow-unsigned-executable-memory": True
+            }
+            ent_file = os.path.join(tmp_dir, "entitlements.plist")
+            with open(ent_file, "wb") as f:
+                plistlib.dump(entitlements, f)
+
+            # Add the MSC app pkg binaries
+            binaries = [
+                os.path.join(
+                    app_payload,
+                    MSC_APP["path"],
+                    "Contents/PlugIns/MSCDockTilePlugin.docktileplugin",
+                ),
+                os.path.join(
+                    app_payload,
+                    MSC_APP["path"],
+                    "Contents/Resources/munki-notifier.app",
+                ),
+                os.path.join(app_payload, MS_APP["path"]),
+                os.path.join(app_payload, MSC_APP["path"]),
+            ]
+
+            # Add the executable libs and bins in python pkg
+            pylib = os.path.join(python_payload, PY_CUR, "lib")
+            pybin = os.path.join(python_payload, PY_CUR, "bin")
+            for pydir in pylib, pybin:
+                binaries.extend(
+                    [
+                        os.path.join(pydir, f)
+                        for f in os.listdir(pydir)
+                        if is_signable_bin(os.path.join(pydir, f))
+                    ]
+                )
+                for root, dirs, files in os.walk(pydir):
+                    for file_ in files:
+                        if is_signable_lib(os.path.join(root, file_)):
+                            binaries.append(os.path.join(root, file_))
+
+            # Add binaries which need entitlements
+            entitled_binaries = [
+                os.path.join(python_payload, PY_CUR, "Resources/Python.app"),
+                os.path.join(pybin, "python3"),
+            ]
+
+            # Sign all the binaries. The order is important. Which is why this is a bit
+            # gross
+            print("Signing binaries (this may take a while)...")
+            for binary in binaries:
+                if verbose:
+                    print(f"Signing {binary}...")
+                sign_binary(
+                    args.sign_binaries,
+                    binary,
+                    deep=True,
+                    force=True,
+                    options=["runtime"],
+                )
+            for binary in entitled_binaries:
+                if verbose:
+                    print(f"Signing {binary} with entitlements from {ent_file}...")
+                sign_binary(
+                    args.sign_binaries,
+                    binary,
+                    deep=True,
+                    force=True,
+                    options=["runtime"],
+                    entitlements=ent_file,
+                )
+            # Finally sign python framework
+            py_fwkpath = os.path.join(python_payload, PY_FWK)
+            if verbose:
+                print(f"Signing {py_fwkpath}...")
+            sign_binary(args.sign_binaries, py_fwkpath, deep=True, force=True)
+
+        final_pkg = os.path.join(os.getcwd(), f"{outfilename}-{munki_version}.pkg")
+        print(f"Building output pkg at {final_pkg}...")
+        flatten_pkg(root_dir, final_pkg)
         if args.sign_package:
             sign_package(args.sign_package, final_pkg)
 
