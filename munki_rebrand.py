@@ -332,7 +332,8 @@ def sign_binary(
     deep=False,
     options=[],
     entitlements="",
-    force=False):
+    force=False,
+):
     """Signs a binary with a signing id, with optional arguments for command line
     args"""
     cmd = [CODESIGN, "--sign", signing_id]
@@ -353,14 +354,14 @@ def sign_binary(
 
 
 def is_signable_bin(path):
-    '''Checks if a path is a file and is executable'''
+    """Checks if a path is a file and is executable"""
     if os.path.isfile(path) and (os.stat(path).st_mode & stat.S_IXUSR > 0):
         return True
     return False
 
 
 def is_signable_lib(path):
-    '''Checks if a path is a file and ends with .so or .dylib'''
+    """Checks if a path is a file and ends with .so or .dylib"""
     if os.path.isfile(path) and (path.endswith(".so") or path.endswith(".dylib")):
         return True
     return False
