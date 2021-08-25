@@ -38,6 +38,7 @@ import fnmatch
 import io
 import json
 import imghdr
+import logging
 
 VERSION = "5.1"
 
@@ -116,26 +117,26 @@ tmp_dir = mkdtemp()
 
 @atexit.register
 def cleanup():
-    print("Cleaning up...")
+    logging.info("Cleaning up...")
     try:
         shutil.rmtree(tmp_dir)
     # In case subprocess cleans up before we do
     except OSError:
         pass
-    print("Done.")
+    logging.info("Done.")
 
 
 def run_cmd(cmd, ret=None):
     """Runs a command passed in as a list. Can also be provided with a regex
     to search for in the output, returning the result"""
-    proc = subprocess.run(cmd, capture_output=True)
-    if verbose and proc.stdout != b"" and not ret:
-        print(proc.stdout.rstrip().decode())
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.stdout and not ret:
+        logging.debug(proc.stdout)
     if proc.returncode != 0:
-        print(proc.stderr.rstrip().decode())
+        logging.critical(proc.stderr)
         sys.exit(1)
     if ret:
-        return proc.stdout.rstrip().decode()
+        return proc.stdout
 
 
 def get_latest_munki_url():
@@ -146,7 +147,7 @@ def get_latest_munki_url():
 
 
 def download_pkg(url, output):
-    print(f"Downloading munkitools from {url}...")
+    logging.info(f"Downloading munkitools from {url}...")
     cmd = [CURL, "--location", "--output", output, url]
     run_cmd(cmd)
 
@@ -186,8 +187,7 @@ def guess_encoding(f):
 def replace_strings(strings_file, code, appname):
     """Replaces localized app name in a .strings file with desired app name"""
     localized = APPNAME_LOCALIZED[code]
-    if verbose:
-        print(f"Replacing '{localized}' in {strings_file} with '{appname}'...")
+    logging.debug(f"Replacing '{localized}' in {strings_file} with '{appname}'...")
     backup_file = f"{strings_file}.bak"
     enc = guess_encoding(strings_file)
 
@@ -210,8 +210,7 @@ def replace_strings(strings_file, code, appname):
 def replace_nib(nib_file, code, appname):
     """Replaces localized app name in a .nib file with desired app name"""
     localized = APPNAME_LOCALIZED[code]
-    if verbose:
-        print(f"Replacing '{localized}' in {nib_file} with '{appname}'...")
+    logging.debug(f"Replacing '{localized}' in {nib_file} with '{appname}'...")
     backup_file = f"{nib_file}.bak"
     plist_to_xml(nib_file)
     with io.open(backup_file, "w", encoding="utf-8") as fw, io.open(
@@ -276,7 +275,7 @@ def convert_to_icns(png, output_dir, actool=""):
         rebrand_dir = os.path.dirname(os.path.abspath(__file__))
         xc_assets_dir = os.path.join(rebrand_dir, "Assets.xcassets/")
         if not os.path.isdir(xc_assets_dir):
-            print(
+            logging.critical(
                 f"The Assets.xcassets folder could not be found in {rebrand_dir}. "
                 "Make sure it's in place, and then try again."
             )
@@ -319,9 +318,9 @@ def convert_to_icns(png, output_dir, actool=""):
 def sign_package(signing_id, pkg):
     """Signs a pkg with a signing id"""
     cmd = [PRODUCTSIGN, "--sign", signing_id, pkg, f"{pkg}-signed"]
-    print("Signing pkg...")
+    logging.info("Signing pkg...")
     run_cmd(cmd)
-    print(f"Moving {pkg}-signed to {pkg}...")
+    logging.info(f"Moving {pkg}-signed to {pkg}...")
     os.rename(f"{pkg}-signed", pkg)
 
 
@@ -365,6 +364,13 @@ def is_signable_lib(path):
     if os.path.isfile(path) and (path.endswith(".so") or path.endswith(".dylib")):
         return True
     return False
+
+
+def setup_logging(verbose=False):
+    level = logging.INFO
+    if verbose:
+        level = logging.DEBUG
+    logging.basicConfig(format="%(message)s", encoding="utf-8", level=level)
 
 
 def main():
@@ -432,28 +438,31 @@ def main():
         "-x", "--version", action="store_true", help="Print version and exit"
     )
     args = p.parse_args()
+
+    setup_logging(args.verbose)
+
     if not args.version and not args.appname:
         p.error("-a or --appname is required")
 
     if args.version:
-        print(VERSION)
+        logging.info(VERSION)
+        atexit.unregister(cleanup)
         sys.exit(0)
 
     if os.geteuid() != 0:
-        print(
+        logging.critical(
             "You must run this script as root in order to build your new "
             "munki installer pkg!"
         )
         sys.exit(1)
 
-    global verbose
-    verbose = args.verbose
+
     outfilename = args.output_file or "munkitools"
 
     # Look for actool
     actool = next((x for x in ACTOOL if os.path.isfile(x)), None)
     if not actool:
-        print(
+        logging.warning(
             "WARNING: actool not found. Icon file will not be replaced in "
             "Munki 3.6 and higher. See README for more info."
         )
@@ -461,10 +470,10 @@ def main():
     if args.icon_file and os.path.isfile(args.icon_file):
         if icon_test(args.icon_file):
             # Attempt to convert png to icns
-            print("Converting .png file to .icns...")
+            logging.info("Converting .png file to .icns...")
             icns, car = convert_to_icns(args.icon_file, tmp_dir, actool=actool)
         else:
-            print("ERROR: icon file must be a 1024x1024 .png")
+            logging.critical("ERROR: icon file must be a 1024x1024 .png")
             sys.exit(1)
 
     output = os.path.join(tmp_dir, "munkitools.pkg")
@@ -503,13 +512,13 @@ def main():
 
         if args.postinstall and os.path.isfile(args.postinstall):
             dest = os.path.join(app_scripts, "postinstall")
-            print(f"Copying postinstall script {args.postinstall} to {dest}...")
+            logging.info(f"Copying postinstall script {args.postinstall} to {dest}...")
             shutil.copyfile(args.postinstall, dest)
-            print(f"Making {dest} executable...")
+            logging.info(f"Making {dest} executable...")
             os.chmod(dest, 0o755)
 
         # Find the lproj directories in the apps' Resources dirs
-        print(f"Replacing app name with {args.appname}...")
+        logging.info(f"Replacing app name with {args.appname}...")
         for app in APPS:
             app_dir = os.path.join(app_payload, app["path"])
             resources_dir = os.path.join(app_dir, "Contents/Resources")
@@ -542,7 +551,7 @@ def main():
                         app["path"], "Contents/Resources", found_icon
                     )
                     dest = os.path.join(app_payload, icon_path)
-                    print(f"Replacing icons in {dest} with {args.icon_file}...")
+                    logging.debug(f"Replacing icons in {dest} with {args.icon_file}...")
                     shutil.copyfile(args.icon_file, dest)
                 if car:
                     car_path = os.path.join(
@@ -551,7 +560,7 @@ def main():
                     dest = os.path.join(app_payload, car_path)
                     if os.path.isfile(dest):
                         shutil.copyfile(car, dest)
-                        print(f"Replacing icons in {dest} with {car}...")
+                        logging.debug(f"Replacing icons in {dest} with {car}...")
 
         # Set root:admin throughout payload
         for root, dirs, files in os.walk(root_dir):
@@ -609,10 +618,9 @@ def main():
 
             # Sign all the binaries. The order is important. Which is why this is a bit
             # gross
-            print("Signing binaries (this may take a while)...")
+            logging.info("Signing binaries (this may take a while)...")
             for binary in binaries:
-                if verbose:
-                    print(f"Signing {binary}...")
+                logging.debug(f"Signing {binary}...")
                 sign_binary(
                     args.sign_binaries,
                     binary,
@@ -621,8 +629,7 @@ def main():
                     options=["runtime"],
                 )
             for binary in entitled_binaries:
-                if verbose:
-                    print(f"Signing {binary} with entitlements from {ent_file}...")
+                logging.debug(f"Signing {binary} with entitlements from {ent_file}...")
                 sign_binary(
                     args.sign_binaries,
                     binary,
@@ -633,18 +640,18 @@ def main():
                 )
             # Finally sign python framework
             py_fwkpath = os.path.join(python_payload, PY_FWK)
-            if verbose:
-                print(f"Signing {py_fwkpath}...")
+            logging.debug(f"Signing {py_fwkpath}...")
             sign_binary(args.sign_binaries, py_fwkpath, deep=True, force=True)
 
         final_pkg = os.path.join(os.getcwd(), f"{outfilename}-{munki_version}.pkg")
-        print(f"Building output pkg at {final_pkg}...")
+        logging.info(f"Building output pkg at {final_pkg}...")
         flatten_pkg(root_dir, final_pkg)
         if args.sign_package:
             sign_package(args.sign_package, final_pkg)
 
     else:
-        print(f"Could not find munkitools pkg {args.pkg}.")
+        logging.critical(f"Could not find munkitools pkg {args.pkg}.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
