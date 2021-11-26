@@ -39,7 +39,7 @@ import io
 import json
 import imghdr
 
-VERSION = "5.0"
+VERSION = "5.1B1"
 
 APPNAME = "Managed Software Center"
 
@@ -205,25 +205,6 @@ def replace_strings(strings_file, code, appname):
             fw.write(line)
     os.remove(strings_file)
     os.rename(backup_file, strings_file)
-
-
-def replace_nib(nib_file, code, appname):
-    """Replaces localized app name in a .nib file with desired app name"""
-    localized = APPNAME_LOCALIZED[code]
-    if verbose:
-        print(f"Replacing '{localized}' in {nib_file} with '{appname}'...")
-    backup_file = f"{nib_file}.bak"
-    plist_to_xml(nib_file)
-    with io.open(backup_file, "w", encoding="utf-8") as fw, io.open(
-        nib_file, "r", encoding="utf-8"
-    ) as fr:
-        for line in fr:
-            # Simpler than mucking about with plistlib
-            line = line.replace(localized, appname)
-            fw.write(line)
-    os.remove(nib_file)
-    os.rename(backup_file, nib_file)
-    plist_to_binary(nib_file)
 
 
 def icon_test(png):
@@ -524,8 +505,6 @@ def main():
                             lfile = os.path.join(root, file_)
                             if fnmatch.fnmatch(lfile, "*.strings"):
                                 replace_strings(lfile, code, args.appname)
-                            if fnmatch.fnmatch(lfile, "*.nib"):
-                                replace_nib(lfile, code, args.appname)
             if args.icon_file:
                 if icns:
                     for icon in app["icon"]:
