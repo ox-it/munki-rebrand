@@ -388,6 +388,13 @@ def main():
         help="Optional postinstall script to include in the output pkg",
     )
     p.add_argument(
+        "-r",
+        "--resource-addition",
+        action="store",
+        default=None,
+        help="Optional add additional file to scripts directory for use by postinstall script"  
+    )
+    p.add_argument(
         "-s",
         "--sign-package",
         action="store",
@@ -487,6 +494,11 @@ def main():
             shutil.copyfile(args.postinstall, dest)
             print(f"Making {dest} executable...")
             os.chmod(dest, 0o755)
+
+        if args.resource_addition and os.path.isfile(args.resource_addition):
+            dest = os.path.join(app_scripts, args.resource_addition)
+            print(f"Adding additional resource {args.resource_addition} to {dest}...")
+            shutil.copyfile(args.resource_addition, dest)
 
         # Find the lproj directories in the apps' Resources dirs
         print(f"Replacing app name with {args.appname}...")
