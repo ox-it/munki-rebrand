@@ -39,7 +39,7 @@ import io
 import json
 import imghdr
 
-VERSION = "5.1"
+VERSION = "5.2"
 
 APPNAME = "Managed Software Center"
 
@@ -73,8 +73,11 @@ MS_APP = {
     "path": os.path.join(MSC_APP["path"], "Contents/Resources", "MunkiStatus.app"),
     "icon": ["MunkiStatus.icns", "AppIcon.icns"],
 }
-
-APPS = [MSC_APP, MS_APP]
+MN_APP = {
+    "path": os.path.join(MSC_APP["path"], "Contents/Resources", "munki-notifier.app"),
+    "icon": ["AppIcon.icns"],
+}
+APPS = [MSC_APP, MS_APP, MN_APP]
 
 PY_FWK = "usr/local/munki/Python.Framework"
 PY_CUR = os.path.join(PY_FWK, "Versions/Current")
