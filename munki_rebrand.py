@@ -39,7 +39,7 @@ import io
 import json
 import imghdr
 
-VERSION = "5.2"
+VERSION = "5.3"
 
 APPNAME = "Managed Software Center"
 
@@ -79,7 +79,8 @@ MN_APP = {
 }
 APPS = [MSC_APP, MS_APP, MN_APP]
 
-PY_FWK = "usr/local/munki/Python.Framework"
+MUNKI_PATH = "usr/local/munki"
+PY_FWK = os.path.join(MUNKI_PATH, "Python.Framework")
 PY_CUR = os.path.join(PY_FWK, "Versions/Current")
 
 ICON_SIZES = [
@@ -185,6 +186,11 @@ def guess_encoding(f):
         return "utf-8"
     return enc
 
+def is_binary(f):
+    if guess_encoding(f) == "binary":
+        return True
+    else:
+        return False
 
 def replace_strings(strings_file, code, appname):
     """Replaces localized app name in a .strings file with desired app name"""
@@ -467,6 +473,7 @@ def main():
         # Grab just the first match of this glob to get the app pkg regardless
         # of version number
         app_pkg = glob.glob(os.path.join(root_dir, "munkitools_app[-.]*"))[0]
+        core_pkg = glob.glob(os.path.join(root_dir, "munkitools_core[-.]*"))[0]
         python_pkg = glob.glob(os.path.join(root_dir, "munkitools_python[-.]*"))[0]
 
         # Get our munkitools version from existing Distribution file
@@ -482,6 +489,7 @@ def main():
 
         app_scripts = os.path.join(app_pkg, "Scripts")
         app_payload = os.path.join(app_pkg, "Payload")
+        core_payload = os.path.join(core_pkg, "Payload")
         python_payload = os.path.join(python_pkg, "Payload")
 
         if args.postinstall and os.path.isfile(args.postinstall):
@@ -565,6 +573,16 @@ def main():
                 os.path.join(app_payload, MS_APP["path"]),
                 os.path.join(app_payload, MSC_APP["path"]),
             ]
+            # In munki 5.3 and higher, managedsoftwareupdate is a signable binary
+            # wrapper to allow for changes to PPPC in Ventura. We don't want to sign it if 
+            # it's just the python script in earlier versions.
+            msu = os.path.join(
+                    core_payload,
+                    MUNKI_PATH,
+                    "managedsoftwareupdate",
+                )
+            if is_binary(msu):
+                binaries.append(msu)
 
             # Add the executable libs and bins in python pkg
             pylib = os.path.join(python_payload, PY_CUR, "lib")
