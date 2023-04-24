@@ -79,8 +79,8 @@ MN_APP = {
 }
 APPS = [MSC_APP, MS_APP, MN_APP]
 
-USR_LOCAL_MUNKI = "usr/local/munki"
-PY_FWK = os.path.join(USR_LOCAL_MUNKI, "Python.Framework")
+MUNKI_PATH = "usr/local/munki"
+PY_FWK = os.path.join(MUNKI_PATH, "Python.Framework")
 PY_CUR = os.path.join(PY_FWK, "Versions/Current")
 
 ICON_SIZES = [
@@ -186,6 +186,11 @@ def guess_encoding(f):
         return "utf-8"
     return enc
 
+def is_binary(f):
+    if guess_encoding(f) == "binary":
+        return True
+    else:
+        return False
 
 def replace_strings(strings_file, code, appname):
     """Replaces localized app name in a .strings file with desired app name"""
@@ -565,14 +570,19 @@ def main():
                     MSC_APP["path"],
                     "Contents/Resources/munki-notifier.app",
                 ),
-                os.path.join(
-                    core_payload,
-                    USR_LOCAL_MUNKI,
-                    "managedsoftwareupdate",
-                ),
                 os.path.join(app_payload, MS_APP["path"]),
                 os.path.join(app_payload, MSC_APP["path"]),
             ]
+            # In munki 5.3 and higher, managedsoftwareupdate is a signable binary
+            # wrapper to allow for changes to PPPC in Ventura. We don't want to sign it if 
+            # it's just the python script in earlier versions.
+            msu = os.path.join(
+                    core_payload,
+                    MUNKI_PATH,
+                    "managedsoftwareupdate",
+                )
+            if is_binary(msu):
+                binaries.append(msu)
 
             # Add the executable libs and bins in python pkg
             pylib = os.path.join(python_payload, PY_CUR, "lib")
