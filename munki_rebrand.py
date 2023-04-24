@@ -39,7 +39,7 @@ import io
 import json
 import imghdr
 
-VERSION = "5.2"
+VERSION = "5.3"
 
 APPNAME = "Managed Software Center"
 
@@ -79,7 +79,8 @@ MN_APP = {
 }
 APPS = [MSC_APP, MS_APP, MN_APP]
 
-PY_FWK = "usr/local/munki/Python.Framework"
+USR_LOCAL_MUNKI = "usr/local/munki"
+PY_FWK = os.path.join(USR_LOCAL_MUNKI, "Python.Framework")
 PY_CUR = os.path.join(PY_FWK, "Versions/Current")
 
 ICON_SIZES = [
@@ -467,6 +468,7 @@ def main():
         # Grab just the first match of this glob to get the app pkg regardless
         # of version number
         app_pkg = glob.glob(os.path.join(root_dir, "munkitools_app[-.]*"))[0]
+        core_pkg = glob.glob(os.path.join(root_dir, "munkitools_core[-.]*"))[0]
         python_pkg = glob.glob(os.path.join(root_dir, "munkitools_python[-.]*"))[0]
 
         # Get our munkitools version from existing Distribution file
@@ -482,6 +484,7 @@ def main():
 
         app_scripts = os.path.join(app_pkg, "Scripts")
         app_payload = os.path.join(app_pkg, "Payload")
+        core_payload = os.path.join(core_pkg, "Payload")
         python_payload = os.path.join(python_pkg, "Payload")
 
         if args.postinstall and os.path.isfile(args.postinstall):
@@ -561,6 +564,11 @@ def main():
                     app_payload,
                     MSC_APP["path"],
                     "Contents/Resources/munki-notifier.app",
+                ),
+                os.path.join(
+                    core_payload,
+                    USR_LOCAL_MUNKI,
+                    "managedsoftwareupdate",
                 ),
                 os.path.join(app_payload, MS_APP["path"]),
                 os.path.join(app_payload, MSC_APP["path"]),
