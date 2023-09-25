@@ -386,7 +386,7 @@ def main():
         "--identifier",
         action="store",
         default="com.googlecode.munki",
-        help="Optionally change the base of the package identifier"
+        help="Optionally change the prefix of the package identifier"
     )
     p.add_argument(
         "-o",
