@@ -383,6 +383,12 @@ def main():
          1024x1024 .png with alpha channel""",
     )
     p.add_argument(
+        "--identifier",
+        action="store",
+        default="com.googlecode.munki",
+        help="Optionally change the base of the package identifier"
+    )
+    p.add_argument(
         "-o",
         "--output-file",
         action="store",
@@ -467,6 +473,7 @@ def main():
         args.pkg = output
 
     if args.pkg and os.path.isfile(args.pkg):
+        pkg_id_prefix = args.identifier
         root_dir = os.path.join(tmp_dir, "root")
         expand_pkg(args.pkg, root_dir)
 
@@ -482,9 +489,9 @@ def main():
         tree = ET.parse(distfile)
         r = tree.getroot()
         # Grab the first pkg-ref element (the one with the version)
-        pkgref = r.findall("pkg-ref[@id='com.googlecode.munki.app']")[0]
+        pkgref = r.findall(f"pkg-ref[@id='{pkg_id_prefix}.app']")[0]
         app_version = pkgref.attrib["version"]
-        product = r.findall("product[@id='com.googlecode.munki']")[0]
+        product = r.findall(f"product[@id='{pkg_id_prefix}']")[0]
         munki_version = product.attrib["version"]
 
         app_scripts = os.path.join(app_pkg, "Scripts")
