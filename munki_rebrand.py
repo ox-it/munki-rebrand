@@ -397,6 +397,13 @@ def main():
         help="Optional postinstall script to include in the output pkg",
     )
     p.add_argument(
+        "-r",
+        "--resource-addition",
+        action="store",
+        default=None,
+        help="Optional add additional file to scripts directory for use by postinstall script"  
+    )
+    p.add_argument(
         "-s",
         "--sign-package",
         action="store",
@@ -498,6 +505,22 @@ def main():
             shutil.copyfile(args.postinstall, dest)
             print(f"Making {dest} executable...")
             os.chmod(dest, 0o755)
+
+        if args.resource_addition and os.path.isfile(args.resource_addition):
+            destination = app_scripts
+            source = args.resource_addition
+            print(f"Adding additional resource {source} to {destination}...")
+            try:
+                shutil.copy(source, destination)
+            except shutil.SameFileError:
+                print("Source and destination represents the same file.")
+            # If there is any permission issue
+            except PermissionError:
+                print("Permission denied.")
+            # For other errors
+            except:
+                print("Error occurred while copying file.")
+
 
         # Find the lproj directories in the apps' Resources dirs
         print(f"Replacing app name with {args.appname}...")
