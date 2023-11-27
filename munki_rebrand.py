@@ -37,9 +37,8 @@ import glob
 import fnmatch
 import io
 import json
-import imghdr
 
-VERSION = "5.5"
+VERSION = "5.5.1"
 
 APPNAME = "Managed Software Center"
 
@@ -218,7 +217,9 @@ def replace_strings(strings_file, code, appname):
 
 def icon_test(png):
     # Check if icon is png
-    if imghdr.what(png) == "png":
+    with open(png, "rb") as f:
+        pngbin = f.read()
+    if pngbin[:8] == b'\x89PNG\r\n\x1a\n' and pngbin[12:16] == b'IHDR':
         return True
     return False
 
