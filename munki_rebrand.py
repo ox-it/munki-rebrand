@@ -323,7 +323,8 @@ def sign_binary(
     deep=False,
     options=[],
     entitlements="",
-    force=False):
+    force=False,
+    preserve=False):
     """Signs a binary with a signing id, with optional arguments for command line
     args"""
     cmd = [CODESIGN, "--sign", signing_id]
@@ -339,6 +340,8 @@ def sign_binary(
     if options:
         cmd.append("--options")
         cmd.append(",".join([option for option in options]))
+    if preserve:
+        cmd.append("--preserve-metadata=identifier,entitlements,flags,runtime")
     cmd.append(binary)
     run_cmd(cmd)
 
@@ -646,9 +649,8 @@ def main():
                 sign_binary(
                     args.sign_binaries,
                     binary,
-                    deep=True,
                     force=True,
-                    options=["runtime"],
+                    preserve=True,
                 )
             for binary in entitled_binaries:
                 if verbose:
@@ -656,16 +658,14 @@ def main():
                 sign_binary(
                     args.sign_binaries,
                     binary,
-                    deep=True,
                     force=True,
-                    options=["runtime"],
-                    entitlements=ent_file,
+                    preserve=True,
                 )
             # Finally sign python framework
             py_fwkpath = os.path.join(python_payload, PY_FWK)
             if verbose:
                 print(f"Signing {py_fwkpath}...")
-            sign_binary(args.sign_binaries, py_fwkpath, deep=True, force=True)
+            sign_binary(args.sign_binaries, py_fwkpath, deep=True, force=True, preserve=True)
 
         final_pkg = os.path.join(os.getcwd(), f"{outfilename}-{munki_version}.pkg")
         print(f"Building output pkg at {final_pkg}...")
