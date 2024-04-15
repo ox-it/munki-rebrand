@@ -69,11 +69,11 @@ MSC_APP = {
     "icon": ["Managed Software Center.icns", "AppIcon.icns"],
 }
 MS_APP = {
-    "path": os.path.join(MSC_APP["path"], "Contents/Resources", "MunkiStatus.app"),
+    "path": os.path.join(MSC_APP["path"], "Contents/Helpers", "MunkiStatus.app"),
     "icon": ["MunkiStatus.icns", "AppIcon.icns"],
 }
 MN_APP = {
-    "path": os.path.join(MSC_APP["path"], "Contents/Resources", "munki-notifier.app"),
+    "path": os.path.join(MSC_APP["path"], "Contents/Helpers", "munki-notifier.app"),
     "icon": ["AppIcon.icns"],
 }
 APPS = [MSC_APP, MS_APP, MN_APP]
@@ -602,7 +602,7 @@ def main():
                 os.path.join(
                     app_payload,
                     MSC_APP["path"],
-                    "Contents/Resources/munki-notifier.app",
+                    "Contents/Helpers/munki-notifier.app",
                 ),
                 os.path.join(app_payload, MS_APP["path"]),
                 os.path.join(app_payload, MSC_APP["path"]),
