@@ -38,7 +38,7 @@ import fnmatch
 import io
 import json
 
-VERSION = "5.5.1"
+VERSION = "5.6"
 
 APPNAME = "Managed Software Center"
 
